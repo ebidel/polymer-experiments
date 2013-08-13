@@ -1,0 +1,24 @@
+<polymer-element name="img-responsive" attributes="src width height" constructor="ImageResponsive">
+  <template>
+     <!--<style>
+        img {
+          width: {{widthOut}};
+          height: {{heightOut}};
+        }
+      </style>-->
+    <img src="{{url}}" width="{{width}}" height="{{height}}">
+  </template>
+  <script>
+    Polymer('img-responsive', {
+      ready: function() {
+        var parts = this.src.split('/');
+        var fileName = parts.pop();
+        var nameParts = fileName.split('.');
+        var prefix = nameParts[0] + devicePixelRatio + 'x';
+        var newName = 'devicePixelRatio' in window ?  prefix: '';
+        this.url = parts.join('/') + '/' +
+                   newName + '.' + nameParts[1];
+      }
+    });
+  </script>
+</polymer-element>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Responsive images with Polymer</title>
+<!-- <script src="../../../polymer-all/polymer.min.js"></script> -->
+<script src="http://www.polymer-project.org/polymer.min.js"></script>
+<link rel="import" href="img-responsive.html">
+<style>
+  /*TODO: does not support settings width/height via css pixels*/
+  img-responsive {
+    height: 50px;
+  }
+</style>
+</head>
+<body>
+
+<!--
+  For ease of use, <img-responsive> takes a src to a image.
+  It loads the correct image by appending a '<devicePixelRatio>x'
+  to the filename.
+
+  For example:
+    on a 2x display :baboon.jpg -> baboon2x.jpg
+    on a 1x display: baboon.jpg -> baboon1x.jpg
+
+  Demo: http://jsbin.com/amitof/6/edit
+-->
+<img-responsive height="100" width="100" src="http://www.html5rocks.com/static/demos/high-dpi/baboon.jpg"></img-responsive>
+
+</body>
+</html>
