@@ -1,0 +1,43 @@
+html, body {
+  margin: 0;
+  height: 100%;
+}
+body {
+  display: flex;
+  display: -webkit-flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+article {
+  display: flex;
+  display: -webkit-flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+section {
+  margin: 1em;
+}
+wc-tabs, angular-tabs {
+  width: 650px;
+  display: inline-block;
+  font-family: 'Roboto Slab';
+  -webkit-font-smoothing: antialiased;
+  background: -webkit-linear-gradient(rgb(230, 230, 230), rgb(200, 200, 200));
+  padding: 10px;
+  border-radius: 10px;
+  position: relative;
+
+}
+angular-tabs {
+  font-family: 'Roboto Slab';
+  -webkit-font-smoothing: antialiased;
+  background: -webkit-linear-gradient(rgb(230, 230, 230), rgb(200, 200, 200));
+  padding: 10px;
+  border-radius: 10px;
+  position: relative;
+}
+pre {
+  font-family: 'Source Code Pro';
+}

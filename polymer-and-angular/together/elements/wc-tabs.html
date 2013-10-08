@@ -1,0 +1,121 @@
+<!-- This version utilizes more Shadow DOM features (e.g. <content>)
+     and Polymer features (e.g. on-*, <property>Changed handlers)-->
+<!-- <polymer-element name="wc-tabs" attributes="heading">
+<template>
+  <link rel="stylesheet" href="../css/tabs.css"/>  
+  <style>
+    @host {
+      :scope {
+        display: block;
+      }
+    }
+    ::content > wc-panel > pre {
+      font-family: 'Source Code Pro';
+    }
+  </style>
+  <div id="container">
+    <div class="tab-strip">
+      <aside>{{heading}}</aside>
+      <div class="tab-wrapper">
+        <content id="headings" select="h2" on-click="select"></content>
+      </div>
+    </div>
+    <div class="contents">
+      <content id="contentpanels" select="section:nth-of-type({{selectedIdx}})"></content>
+    </div>
+  </div>
+</template>
+<script>
+  Polymer('wc-tabs', {
+    // applyAuthorStyles: true,
+    heading: '',
+    selectedIdx: -1,
+    ready: function() {
+      this.selectedIdx = 0;
+    },
+    selectedIdxChanged: function(oldVal) {
+      var headings = this.$.headings.getDistributedNodes();
+
+      if (!headings.length) {
+        return;
+      }
+
+      [].forEach.call(headings, function(heading, i) {
+        heading.classList.remove('active');
+      });
+
+      headings[this.selectedIdx].classList.add('active');
+
+      this.async(function() {
+        this.$.contentpanels.select = 'section:nth-of-type(' + (this.selectedIdx + 1) + ')';
+      });
+    },
+    select: function(e, detail, sender) {
+      var headings = this.$.headings.getDistributedNodes();
+
+      [].forEach.call(headings, function(heading, i) {
+        if (heading == e.target) {
+          this.selectedIdx = i;
+        }
+      }.bind(this));
+    }
+  });
+</script>
+</polymer-element>
+ -->
+
+
+<polymer-element name="wc-tabs" attributes="heading">
+<template>
+  <link rel="stylesheet" href="../css/tabs.css"/> 
+  <style polymer-scope="global">
+    @import url(http://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto+Slab:400,700);
+  </style>
+  <!--<style>
+    @host {
+      :scope {
+        /* Fill me with the styles in tabs.css */
+      }
+    }
+  </style>-->
+  <aside>{{heading}}</aside>
+  <div class="tab-wrapper">
+    <template repeat="{{panel in panels}}">
+      <h2 on-click="select" class="{{active: panel.selected}}">{{panel.heading}}</h2>
+    </template>
+  </div>
+  <div class="contents">
+    <content select="wc-panel"></content>
+  </div>
+</template>
+<script>
+  Polymer('wc-tabs', {
+    //applyAuthorStyles: true,
+    heading: '',
+    created: function() {
+      this.panels = [].slice.call(this.children);
+
+      if (this.panels.length) {
+        this.panels[0].selected = true;
+      }
+
+      // Keep this.panels in sync. Use a MO to monitor add/removal of light dom children.
+      var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.type == 'childList') {
+            this.panels = [].slice.call(this.children);
+          }
+        }.bind(this));    
+      }.bind(this));
+
+      observer.observe(this, {childList: true});
+    },
+    select: function(e, detail, sender) {
+      this.panels.forEach(function(panel) {
+        panel.selected = false;
+      });
+      sender.templateInstance.model.panel.selected = true;
+    }
+  });
+</script>
+</polymer-element>

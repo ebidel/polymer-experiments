@@ -1,0 +1,12 @@
+<polymer-element name="wc-panel" attributes="heading selected">
+  <template>
+    <div hidden?="{{!selected}}">
+      <content></content>
+    </div>
+  </template>
+  <script>
+    Polymer('wc-panel', {
+      selected: false
+    });
+  </script>
+</polymer-element>
