@@ -16,7 +16,7 @@
 <body ng-app="tabs">
 
 <header>
-  <input ng-model="heading" placeholder="Title">
+  <input ng-model="heading" ng-init="heading='Declartive FTW!'" placeholder="Title">
   <button id="addlightdom">Add tab</button>
 </header>
 
@@ -24,9 +24,9 @@
 
 <section>
 
-<wc-tabs heading="Polymer: web component">
+<wc-tabs heading="{{heading}}">
   <wc-panel heading="Markup">
-    Markup to declare this component:
+    Markup to instantiate this Polymer element:
     <pre></pre>
   </wc-panel>
   <wc-panel heading="Code">
@@ -34,10 +34,12 @@
   </wc-panel>
 </wc-tabs>
 
+<!-- Another way to structure the custom element.
+     Utilizes for <content> insertion points in the element definition. -->
 <!-- <wc-tabs heading="Polymer: web component">
   <h2>Markup</h2>
   <section>
-    Markup to declare this component:
+    Markup to instantiate this Polymer element:
     <pre></pre>
   </section>
   <h2>Code</h2>
@@ -49,9 +51,9 @@
 </section>
 <section>
 
-<angular-tabs heading="Angular: directive">
+<angular-tabs heading="{{heading}}">
   <panel heading="Markup">
-    Markup to declare this component:
+    Markup to instantiate this Angular directive:
     <pre></pre>
   </panel>
   <panel heading="Code">
@@ -88,7 +90,7 @@ var wcTabs = document.querySelector('wc-tabs');
 wcTabs.querySelector('pre:first-of-type').textContent = wcTabs.outerHTML;
 
 fetchCode('wc-tabs wc-panel:last-of-type pre', 'elements/wc-tabs.html', 'document');
-//fetchCode('wc-tabs section:last-of-type pre', 'elements/wc-tabs.html', 'document');
+//fetchCode('wc-tabs section:last-of-type pre', 'elements/wc-tabs.html', 'document'); // Use for second example.
 
 var angularTabs = document.querySelector('angular-tabs');
 angularTabs.querySelector('pre').textContent = angularTabs.outerHTML;
