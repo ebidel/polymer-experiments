@@ -4,9 +4,10 @@
 <meta charset="utf-8" />
 <title>Angular JS and Polymer sitting in a tree</title>
 
-<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0-rc.2/angular.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js"></script>
 <script src="http://www.polymer-project.org/polymer.min.js"></script>
 
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto+Slab:400,700)"/>
 <link rel="stylesheet" href="css/app.css"/>
 <link rel="stylesheet" href="css/tabs.css"/>
 
@@ -86,16 +87,18 @@ function fetchCode(selector, url, opt_responseType) {
   xhr.send();
 }
 
-var wcTabs = document.querySelector('wc-tabs');
-wcTabs.querySelector('pre:first-of-type').textContent = wcTabs.outerHTML;
+document.addEventListener('WebComponentsReady', function(e) {
+  var wcTabs = document.querySelector('wc-tabs');
+  wcTabs.querySelector('pre:first-of-type').textContent = wcTabs.outerHTML;
 
-fetchCode('wc-tabs wc-panel:last-of-type pre', 'elements/wc-tabs.html', 'document');
-//fetchCode('wc-tabs section:last-of-type pre', 'elements/wc-tabs.html', 'document'); // Use for second example.
+  fetchCode('wc-tabs wc-panel:last-of-type pre', 'elements/wc-tabs.html', 'document');
+  //fetchCode('wc-tabs section:last-of-type pre', 'elements/wc-tabs.html', 'document'); // Use for second example.
 
-var angularTabs = document.querySelector('angular-tabs');
-angularTabs.querySelector('pre').textContent = angularTabs.outerHTML;
+  var angularTabs = document.querySelector('angular-tabs');
+  angularTabs.querySelector('pre').textContent = angularTabs.outerHTML;
 
-fetchCode('panel:last-of-type pre', 'directives.js');
+  fetchCode('panel:last-of-type pre', 'directives.js');
+});
 
 document.querySelector('#addlightdom').addEventListener('click', function(e) {
   var panel = document.createElement('wc-panel');

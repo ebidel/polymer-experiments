@@ -17,7 +17,7 @@
     <div class="tab-strip">
       <aside>{{heading}}</aside>
       <div class="tab-wrapper">
-        <content id="headings" select="h2" on-click="select"></content>
+        <content id="headings" select="h2" on-click="{{select}}"></content>
       </div>
     </div>
     <div class="contents">
@@ -65,23 +65,22 @@
  -->
 
 
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto+Slab:400,700)"/>
+
 <polymer-element name="wc-tabs" attributes="heading">
 <template>
-  <link rel="stylesheet" href="../css/tabs.css"/> 
-  <style polymer-scope="global">
-    @import url(http://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto+Slab:400,700);
-  </style>
+  <link rel="stylesheet" href="../css/tabs.css"/>
   <!--<style>
     @host {
       :scope {
-        /* Fill me with the styles in tabs.css */
+        /* Instead, can fill me with the styles in tabs.css */
       }
     }
   </style>-->
   <aside>{{heading}}</aside>
   <div class="tab-wrapper">
     <template repeat="{{panel in panels}}">
-      <h2 on-click="select" class="{{active: panel.selected}}">{{panel.heading}}</h2>
+      <h2 on-click="{{select}}" class="{{ {active: panel.selected} | tokenList }}">{{panel.heading}}</h2>
     </template>
   </div>
   <div class="contents">
@@ -92,7 +91,7 @@
   Polymer('wc-tabs', {
     //applyAuthorStyles: true,
     heading: '',
-    created: function() {
+    ready: function() {
       this.panels = [].slice.call(this.children);
 
       if (this.panels.length) {
@@ -105,7 +104,7 @@
           if (mutation.type == 'childList') {
             this.panels = [].slice.call(this.children);
           }
-        }.bind(this));    
+        }.bind(this));
       }.bind(this));
 
       observer.observe(this, {childList: true});
