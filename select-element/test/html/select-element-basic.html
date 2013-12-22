@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <title>polymer-selector-basic</title>
+    <script src="../../bower_components/platform/platform.js"></script>
+    <script src="../../tools/test/htmltest.js"></script>
+    <script src="../../node_modules/chai/chai.js"></script>
+    <link rel="import" href="../../elements/select-element.html">
+  </head>
+  <body>
+
+    <select-element id="select1">
+      <x-option>Item 1</x-option>
+      <x-option>Item 2</x-option>
+      <x-option>Item 3</x-option>
+      <x-option>Item 4</x-option>
+      <li>no supported</li>
+    </select-element>
+
+    <script>
+      var assert = chai.assert;
+      document.addEventListener('WebComponentsReady', function() {
+        // select1
+        var s = document.querySelector('#select1');
+
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.isFalse(s.multiple);
+          assert.equal(s.size, 0);
+          assert.equal(s.length, 4);
+          assert.lengthOf(s.options, 4);
+          assert.equal(s.selectedIndex, 0);
+          assert.lengthOf(s.selectedOptions, 1);
+          assert.equal(s.selectedOptions[0], s.firstElementChild);
+        });
+
+        // Append new option child.
+        var xOption = document.createElement('x-option');
+        s.appendChild(xOption);
+
+        // Have to wrap because MutationObserver is async...?
+        setTimeout(function() {
+          assert.equal(s.length, 5);
+          assert.lengthOf(s.options, 5);
+          assert.equal(s.selectedIndex, 0);
+          assert.lengthOf(s.selectedOptions, 1);
+          assert.equal(s.selectedOptions[0], s.firstElementChild);
+
+          done();
+        }, 0);
+
+      });
+    </script>
+  </body>
+</html>

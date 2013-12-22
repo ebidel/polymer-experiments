@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Polymer Elements Test Runner (Mocha)</title>
+    <meta charset="UTF-8">
+    <!-- -->
+    <link rel="stylesheet" href="../node_modules/mocha/mocha.css" />
+    <script src="../node_modules/mocha/mocha.js"></script>
+    <script src="../node_modules/chai/chai.js"></script>
+    <script src="../tools/test/mocha-htmltest.js"></script>
+    <!-- -->
+    <script src="../bower_components/platform/platform.js"></script>
+  </head>
+  <body>
+    <div id="mocha"></div>
+    <script>
+      mocha.setup({ui: 'tdd', slow: 1000, htmlbase: ''});
+    </script>
+    <!-- -->
+    <script src="js/select-element.js"></script>
+    <!-- -->
+    <script>
+      mocha.run();
+    </script>
+  </body>
+</html>

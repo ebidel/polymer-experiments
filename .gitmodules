@@ -1,0 +1,3 @@
+[submodule "select-element/tools"]
+	path = select-element/tools
+	url = git@github.com:Polymer/tools.git

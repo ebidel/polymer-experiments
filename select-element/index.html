@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!--
+Copyright 2013 Eric Bidelman
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Author: Eric Bidelman (ebidel@)
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+<title>Polymer implementation of &lt;select> element</title>
+
+<script src="bower_components/platform/platform.js"></script>
+<!-- <script src="bower_components/polymer/polymer.js"></script> -->
+
+<link rel="import" href="elements/select-element.html">
+
+<style>
+polymer-element {
+  display: none;
+}
+</style>
+</head>
+<body unresolved>
+  
+<select-element multiple>
+  <x-option>Do</x-option> <!-- Note: <option> doesn't go through the insertion point. -->
+  <x-option selected>Rea asdf asdf</x-option>
+  <x-option>Mi</x-option>
+  <x-option>Fa</x-option>
+  <x-option>So</x-option>
+</select-element>
+
+<select>
+  <option>Do</option>
+  <option>Re</option>
+  <option>Mi</option>
+</select>
+
+<select size="4" multiple>
+  <option>Do</option>
+  <option selected>Rea asdf asdf</option>
+  <option>Mi</option>
+  <option>Fa</option>
+  <option>So</option>
+</select>
+
+</body>
+</html>

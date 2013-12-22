@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+  <head>
+    <title>polymer-selector-multiple</title>
+    <script src="../../bower_components/platform/platform.js"></script>
+    <script src="../../tools/test/htmltest.js"></script>
+    <script src="../../node_modules/chai/chai.js"></script>
+    <link rel="import" href="../../elements/select-element.html">
+    <style>
+
+    </style>
+  </head>
+  <body>
+
+    <select-element id="select1" multiple>
+      <x-option>Item 1</x-option>
+      <x-option>Item 2</x-option>
+      <x-option>Item 3</x-option>
+      <x-option>Item 4</x-option>
+    </select-element>
+
+    <select-element id="select2" multiple size="3">
+      <x-option>Item 1</x-option>
+      <x-option selected id="selected2-item">Item 2</x-option>
+      <x-option selected>Item 3</x-option>
+    </select-element>
+
+    <script>
+      var assert = chai.assert;
+      document.addEventListener('WebComponentsReady', function() {
+        // select1 - basic defaults for multiple
+        var s = document.querySelector('#select1');
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.isTrue(s.multiple);
+          assert.equal(s.size, 0);
+          assert.equal(s.length, 4);
+          assert.lengthOf(s.options, 4);
+          assert.equal(s.selectedIndex, -1);
+          assert.lengthOf(s.selectedOptions, 0);
+
+          done();
+        });
+
+        // select2 - multiple selected
+        var s2 = document.querySelector('#select2');
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.isTrue(s2.multiple);
+          assert.equal(s2.size, 3);
+          assert.equal(s2.length, 3);
+          assert.equal(s2.selectedIndex, 1);
+          assert.lengthOf(s2.selectedOptions, 2);
+          assert.equal(s2.selectedOptions[0], document.querySelector('#selected2-item'));
+
+          done();
+        });
+
+      });
+    </script>
+  </body>
+</html>
