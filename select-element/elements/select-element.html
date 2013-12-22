@@ -1,0 +1,148 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<!-- TODO: make keyboard navigable -->
+
+<polymer-element name="x-option" attributes="" constructor="XOption" noscript>
+  <template>
+    <style>
+      :host { display: block; }
+    </style>
+    <content></content>
+  </template>
+</polymer-element>
+
+<polymer-element name="select-element" attributes="form multiple size selectedIndex selectedOptions value length options disabled name tabIndex" constructor="SelectElement" tabIndex="-1">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+        list-style: none;
+        box-sizing: border-box;
+        /*color: black;*/
+        /*background-color: white;*/
+        cursor: default;
+        /*white-space: pre;*/
+        font: 11px/normal 'Lucida Grande';
+        margin: 2px;
+        outline: normal;
+      }
+      :host([size]:host),
+      :host([multiple]:host),
+      :host([size][multiple]:host) {
+        border: 1px inset #999999;
+        height: 57px; /* TODO: doesn't scale with font-size */
+        vertical-align: top;
+        overflow-y: auto;
+      }
+      div {
+        padding: 0 20px 1px 2px;
+        padding-right: 20px;
+        box-sizing: border-box;
+      }
+      [selected] {
+        background-color: #3875d7;
+        color: white;
+      }
+
+      ::content > * {
+        padding: 0 20px 1px 2px;
+        padding-right: 20px;
+      }
+      ::content [selected] {
+        background-color: #3875d7;
+        color: white;
+      }
+    </style>
+    <content id="content" select="x-option" on-click="{{select}}"></content>
+    <!-- <template repeat="{{option in options}}">
+      <div selected?="{{option.selected}}" on-click="{{select}}">{{option.textContent}}</div>
+    </template> -->
+  </template>
+  <script>
+    (function() {
+      function monitorChildren_() {
+        var observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type == 'childList') {
+              this.options = this.$.content.getDistributedNodes();
+              Platform.flush();
+            }
+          }.bind(this));
+        }.bind(this));
+
+        observer.observe(this, {childList: true});
+      }
+
+      Polymer('select-element', {
+        //applyAuthorStyles: true,
+        //resetStyleInheritance: true,
+        multiple: false,
+        size: 0,
+        length: 0,
+        selectedIndex: 0, 
+        ready: function() {
+          // TODO: handle children change with MutationObserver
+          this.options = this.$.content.getDistributedNodes(); //this.options = [].slice.call(this.children);
+
+          if (this.multiple) {
+            this.select(-1);
+          } else {
+            this.select(0);
+          }
+
+          monitorChildren_.bind(this)();
+        },
+        optionsChanged: function() {
+          this.length = this.options.length;
+        },
+        selectedOptionsChanged: function() {
+          var options = [].slice.call(this.options);
+
+          if (this.selectedOptions.length) {
+            // selectedIndex is always the first selected item, even for multi-select.
+            this.selectedIndex = options.indexOf(this.selectedOptions[0]);
+          } else {
+            // Drop down select defaults to first item; multi-select to -1.
+            this.selectedIndex = !this.multiple ? 0 : -1;
+          }
+        },
+        select: function(e, detail, sender) {
+          var options = [].slice.call(this.options);
+          var clickedOption = typeof e === 'number' ? this.options[e] : e.path[0];
+
+          if (clickedOption) {
+            var isAlreadySelected = clickedOption.getAttribute('selected');
+
+            // All multi-select
+            // TODO: support shift key.
+            if (e.metaKey) {
+              if (isAlreadySelected) {
+                clickedOption.removeAttribute('selected');
+              } else {
+                clickedOption.setAttribute('selected', true);
+              }
+            } else {
+              options.forEach(function(opt) {
+                opt.removeAttribute('selected');
+              });
+              clickedOption.setAttribute('selected', true);
+            }
+          }
+
+          this.selectedOptions = options.filter(function(opt, i, arr) {
+            return opt.getAttribute('selected') != null;
+          });
+
+          // // TODO: handle multi-select.
+          // this.options.forEach(function(option) {
+          //   option.selected = false;
+          // });
+          // var selectedOption = sender.templateInstance.model.option;
+          // selectedOption.selected = true;
+          // this.selectedIndex = this.options.indexOf(selectedOption);
+        }
+      });
+
+    })();
+  </script>
+</polymer-element>
