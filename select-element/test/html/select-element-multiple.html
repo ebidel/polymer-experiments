@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>polymer-selector-multiple</title>
+    <title>select-element-mulltiple-test</title>
     <script src="../../bower_components/platform/platform.js"></script>
     <script src="../../tools/test/htmltest.js"></script>
     <script src="../../node_modules/chai/chai.js"></script>
@@ -19,9 +19,13 @@
       <x-option>Item 4</x-option>
     </select-element>
 
-    <select-element id="select2" multiple size="3">
+    <select-element id="select2" multiple>
       <x-option>Item 1</x-option>
-      <x-option selected id="selected2-item">Item 2</x-option>
+    </select-element>
+
+    <select-element id="select3" multiple size="3">
+      <x-option>Item 1</x-option>
+      <x-option selected class="item">Item 2</x-option>
       <x-option selected>Item 3</x-option>
     </select-element>
 
@@ -38,20 +42,36 @@
           assert.lengthOf(s.options, 4);
           assert.equal(s.selectedIndex, -1);
           assert.lengthOf(s.selectedOptions, 0);
+          assert.equal(s.type, 'select-multiple');
+          assert.equal(s.value, '');
 
           done();
         });
 
-        // select2 - multiple selected
-        var s2 = document.querySelector('#select2');
+        // select3 - multiple selected
+        var s3 = document.querySelector('#select3');
         Platform.flush();
         Platform.endOfMicrotask(function() {
-          assert.isTrue(s2.multiple);
-          assert.equal(s2.size, 3);
-          assert.equal(s2.length, 3);
-          assert.equal(s2.selectedIndex, 1);
-          assert.lengthOf(s2.selectedOptions, 2);
-          assert.equal(s2.selectedOptions[0], document.querySelector('#selected2-item'));
+          assert.isTrue(s3.multiple);
+          assert.equal(s3.size, 3);
+          assert.equal(s3.length, 3);
+          assert.equal(s3.selectedIndex, 1);
+          assert.lengthOf(s3.selectedOptions, 2);
+          assert.equal(s3.selectedOptions[0], s3.querySelector('.item'));
+
+          done();
+        });
+
+        // select2 - user selects new option
+        var s2 = document.querySelector('#select2');
+        var option = s2.querySelector('x-option');
+        option.click();
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.isTrue(option.selected);
+          assert.equal(s2.selectedIndex, 0);
+          assert.equal(s2.value, option.value);
+          assert.equal(getComputedStyle(option).backgroundColor, 'rgb(212, 212, 212)');
 
           done();
         });

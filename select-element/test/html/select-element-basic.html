@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>polymer-selector-basic</title>
+    <title>select-element-basic-test</title>
     <script src="../../bower_components/platform/platform.js"></script>
     <script src="../../tools/test/htmltest.js"></script>
     <script src="../../node_modules/chai/chai.js"></script>
@@ -16,6 +16,25 @@
       <x-option>Item 4</x-option>
       <li>no supported</li>
     </select-element>
+
+    <select-element id="select-append">
+      <x-option>Item 1</x-option>
+      <x-option>Item 2</x-option>
+    </select-element>
+
+    <select-element id="select-someselected">
+      <x-option>Item 1</x-option>
+      <x-option selected>Item 2</x-option>
+      <x-option selected>Item 3</x-option>
+    </select-element>
+
+    <form id="form">
+      <select-element id="select2"></select-element>
+    </form>
+
+    <form id="form2"></form>
+    <select-element id="select-form-id" form="form2"></select-element>
+    
 
     <script>
       var assert = chai.assert;
@@ -32,22 +51,87 @@
           assert.equal(s.selectedIndex, 0);
           assert.lengthOf(s.selectedOptions, 1);
           assert.equal(s.selectedOptions[0], s.firstElementChild);
+          assert.equal(s.type, 'select-one');
+
+          // Try to set read only .type.
+          s.type = 'not settable set';
+          assert.equal(s.type, 'select-one');
+
+          assert.equal(s.value, s.firstElementChild.textContent);
+          
+          // Set new valid/invalid .value.
+          var secondOption = s.firstElementChild.nextElementSibling;
+
+          s.value = secondOption.textContent;
+          assert.equal(s.value, secondOption.textContent); // valid
+          assert.equal(s.selectedIndex, 1);
+          assert.lengthOf(s.selectedOptions, 1);
+          assert.equal(s.selectedOptions[0], secondOption);
+
+          s.value = 'somethingnotright'; // invalid
+          assert.equal(s.value, '');
+          assert.equal(s.selectedIndex, -1);
+          assert.lengthOf(s.selectedOptions, 0);
+
+          assert.isNull(s.form);
         });
 
-        // Append new option child.
+        // select-append - append new option child.
+        var sAppend = document.querySelector('#select-append'); 
         var xOption = document.createElement('x-option');
-        s.appendChild(xOption);
+        sAppend.appendChild(xOption);
 
         // Have to wrap because MutationObserver is async...?
         setTimeout(function() {
-          assert.equal(s.length, 5);
-          assert.lengthOf(s.options, 5);
-          assert.equal(s.selectedIndex, 0);
-          assert.lengthOf(s.selectedOptions, 1);
-          assert.equal(s.selectedOptions[0], s.firstElementChild);
+          assert.equal(sAppend.length, 3);
+          assert.lengthOf(sAppend.options, 3);
+          assert.equal(sAppend.selectedIndex, 0);
+          assert.lengthOf(sAppend.selectedOptions, 1);
+          assert.equal(sAppend.selectedOptions[0], sAppend.firstElementChild);
 
           done();
         }, 0);
+
+        // select-someselected
+        var ss = document.querySelector('#select-someselected');
+        assert.lengthOf(ss.selectedOptions, 1);
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.equal(ss.selectedIndex, 2, "Correct defaults weren't selected");
+          done();
+        });
+
+        // select2 - test .form, empty options
+        var s2 = document.querySelector('#select2');
+        assert.equal(s2.form, document.querySelector('#form'));
+        assert.lengthOf(s2.selectedOptions, 0);
+        assert.equal(s2.length, 0);
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.equal(s2.selectedIndex, -1);
+
+          done();
+        });
+
+        // Test select-form-id: set .form by attribute.
+        var selectForm = document.querySelector('#select-form-id');
+        assert.equal(selectForm.form, document.querySelector('#form2'));
+
+        // Test .value
+        var s3 = document.createElement('select-element');
+        var o3 = document.createElement('x-option');
+        assert.equal(s3.value, '');
+
+        o3.textContent = 'hello world';
+
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.equal(o3.value, 'hello world');
+          o3.value = 'hi';
+          assert.equal(o3.value, 'hi');
+
+          done();
+        });
 
       });
     </script>

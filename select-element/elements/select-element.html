@@ -2,64 +2,113 @@
 
 <!-- TODO: make keyboard navigable -->
 
-<polymer-element name="x-option" attributes="" constructor="XOption" noscript>
+<polymer-element name="x-option" attributes="selected value" constructor="XOption" noscript>
   <template>
     <style>
-      :host { display: block; }
+      :host {
+        display: block;
+        box-sizing: border-box;
+      }
     </style>
     <content></content>
   </template>
+  <script>
+    Polymer('x-option', {
+      selected: false,
+      ready: function() {
+        this.valueChanged();
+      },
+      valueChanged: function() {
+        this.value = this.value || this.textContent;
+      }
+    });
+  </script>
 </polymer-element>
 
-<polymer-element name="select-element" attributes="form multiple size selectedIndex selectedOptions value length options disabled name tabIndex" constructor="SelectElement" tabIndex="-1">
+<polymer-element name="select-element" attributes="form multiple size name tabIndex type" constructor="SelectElement" tabindex="0" on-blur="{{onBlur_}}">
   <template>
     <style>
       :host {
         display: inline-block;
         list-style: none;
         box-sizing: border-box;
-        /*color: black;*/
-        /*background-color: white;*/
         cursor: default;
-        /*white-space: pre;*/
         font: 11px/normal 'Lucida Grande';
         margin: 2px;
         outline: normal;
+        -moz-user-select: none;
+        -webkit-user-select: none;
+        user-select: none;
+        position: relative;
+      }
+      :host(:not([multiple]):not([size]):host) {
+        border-radius: 3px;
+        background: url(../img/arrows.png) no-repeat 94% 50%,
+                    -webkit-linear-gradient(top, white 40%, #eee 60%) no-repeat 50% 50%;
+        background-size: 5px, contain;
+        box-shadow: 0px 0px 1px #222;
+        vertical-align: bottom;
+        margin-bottom: 3px;
+        height: {{optionsHeight_}}px;
+        overflow: auto;
+      }
+      :host(:not([multiple]):not([size]):host.open) {
+        overflow: initial;
+        height: auto;
+        background: white;
+        box-shadow: 3px 5px 15px #aaa, 0 10px 15px #ccc;
+        outline: none;
+        padding: 4px 0;
+      }
+      :host(:not([multiple]):not([size]):host) ::content > * {
+        padding: 1px 17px 2px 5px;
+      }
+      :host(:not([multiple]):not([size]):host.open) ::content > *:hover {
+        background-color: #3875d7;
+        color: white;
       }
       :host([size]:host),
       :host([multiple]:host),
       :host([size][multiple]:host) {
         border: 1px inset #999999;
-        height: 57px; /* TODO: doesn't scale with font-size */
+        height: {{containerHeight_}}px;
         vertical-align: top;
         overflow-y: auto;
       }
-      div {
+      ::content > * {
         padding: 0 20px 1px 2px;
         padding-right: 20px;
         box-sizing: border-box;
       }
-      [selected] {
+      :host([multiple]:host) ::content [selected],
+      :host([size]:host) ::content [selected] {
+        background-color: rgb(212,212,212);
+        color: black;
+      }
+      :host([multiple]:host:focus) ::content [selected],
+      :host([size]:host:focus) ::content [selected] {
         background-color: #3875d7;
         color: white;
       }
-
-      ::content > * {
-        padding: 0 20px 1px 2px;
-        padding-right: 20px;
+      :host(:not([multiple]):not([size]):host) #container {
+        /*position: absolute;*/
+        /*overflow: auto;*/
       }
-      ::content [selected] {
-        background-color: #3875d7;
-        color: white;
+      :host(:not([multiple]):not([size]):host) #container.open {
+        /*overflow: initial;*/
+        /*height: auto;*/
       }
     </style>
-    <content id="content" select="x-option" on-click="{{select}}"></content>
-    <!-- <template repeat="{{option in options}}">
-      <div selected?="{{option.selected}}" on-click="{{select}}">{{option.textContent}}</div>
-    </template> -->
+    <div id="container" on-click="{{onOpen_}}">
+      <content id="content" select="x-option" on-click="{{onSelect_}}"></content>
+    </div>
   </template>
   <script>
     (function() {
+      var MIN_SIZE_ = 4;
+
+      // These methods are intentionally private as to not add them to the 
+      // element's public API.
       function monitorChildren_() {
         var observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
@@ -73,73 +122,188 @@
         observer.observe(this, {childList: true});
       }
 
+      function setupInitialSelected_() {
+        var options = [].slice.call(this.options);
+
+        if (!this.options.length) {
+          return;
+        }
+
+        this.selectedOptions = options.filter(function(opt, i, arr) {
+          return opt.selected;
+        });
+
+        // Dropdown case
+        if (!this.multiple) {
+          // Last item with selected attribute is the one to select.
+          // Otherwise, first time is selected by default.
+          var numSelected = this.selectedOptions.length; 
+          var opt = numSelected ? this.selectedOptions[numSelected - 1] : options[0];
+          this.selectedOptions = [opt];
+          this.selectedOptions[0].selected = true;
+        }
+      }
+
       Polymer('select-element', {
         //applyAuthorStyles: true,
         //resetStyleInheritance: true,
         multiple: false,
         size: 0,
-        length: 0,
-        selectedIndex: 0, 
-        ready: function() {
-          // TODO: handle children change with MutationObserver
-          this.options = this.$.content.getDistributedNodes(); //this.options = [].slice.call(this.children);
+        selectedIndex: -2,
+        form: null,
+        value_: '',
+        get type() {
+          return 'select-' + (this.multiple ? 'multiple' : 'one');
+        },
+        get length() {
+          return this.options ? this.options.length : 0;
+        },
+        set length(val) {
+          // TODO: length is settable, update options area if it's not correctly set.
+        },
+        get value() {
+          var idx = this.selectedIndex;
+          return idx > -1 ? this.options[idx].value : '';
+        },
+        set value(val) {
+          this.value_ = val;
 
-          if (this.multiple) {
-            this.select(-1);
-          } else {
-            this.select(0);
+          // When .value is set explicitly, make sure it's a valid option, then
+          // update selectedOptions/selectedIndex.
+          for (var i = 0, opt; opt = this.options[i]; ++i) {
+            opt.selected = false; // Reset all 
+            if (opt.value == this.value_) {
+              opt.selected = true;
+              this.selectedIndex = i;
+              this.selectedOptions = [opt];
+              return;
+            }
           }
 
-          monitorChildren_.bind(this)();
+          // Set to a invalid option.
+          this.selectedIndex = -1;
+          this.selectedOptions = [];
+          this.value_ = '';
         },
-        optionsChanged: function() {
-          this.length = this.options.length;
+        add: function(element, opt_before) {
+          //opt_before is optional and can be an element or index to insert element before.
+        },
+        remove: function(idx) {
+
+        },
+        item: function(idx) {
+
+        }, 
+        namedItem: function(name) {
+
+        }, 
+        ready: function() {
+          this.options = this.$.content.getDistributedNodes();
+          this.selectedOptions = [];
+
+          // Handle add/remove light DOM options w/ MutationObserver.
+          monitorChildren_.bind(this)();
+
+          // Finds <x-option selected> in light DOM.
+          setupInitialSelected_.bind(this)();
+
+          // Explicitly call to potentially find the form element from the id.
+          this.formChanged();
+
+          if (this.options.length) {
+            this.optionsHeight_ = parseInt(getComputedStyle(this.options[0]).height);
+          }
+
+          this.sizeChanged(); // Explicitly call to set initial height;
+        },
+        sizeChanged: function() {
+          var size = this.size < MIN_SIZE_ ? MIN_SIZE_ : this.size;
+          //this.$.container.style.height = (this.size * ) + 'px';
+          this.containerHeight_ = (size * this.optionsHeight_);
+        },
+        formChanged: function() {
+          // Fetch the form element if we're given an id.
+          if (typeof this.form === 'string') {
+            this.form = document.getElementById(this.form);
+          } else if (!(this.form instanceof HTMLFormElement)) {
+            // Find the select's parent form element.
+            // Would be nice to put this in form() getter, in the absence of
+            // Object.observe(), it would be extra work for the dirty checking.
+            var parent = this.parentElement;
+            while (parent) {
+              if (parent instanceof HTMLFormElement) {
+                this.form = parent;
+                break;
+              }
+              parent = parent.parentElement;
+            }
+          }
         },
         selectedOptionsChanged: function() {
           var options = [].slice.call(this.options);
 
           if (this.selectedOptions.length) {
-            // selectedIndex is always the first selected item, even for multi-select.
             this.selectedIndex = options.indexOf(this.selectedOptions[0]);
+
+            // Adjust dropdown offset to selected item.
+            if (!this.multiple) {
+              this.options[0].style.marginTop = (-this.optionsHeight_ * this.selectedIndex) + 'px';
+              this.blur(); // this.onBlur_();
+            }
+
           } else {
-            // Drop down select defaults to first item; multi-select to -1.
-            this.selectedIndex = !this.multiple ? 0 : -1;
+            // Multi-select defaults to to -1, drop down to first item.
+            this.selectedIndex = this.multiple || !this.options.length ? -1 : 0;
           }
         },
-        select: function(e, detail, sender) {
+        onSelect_: function(e, detail, sender) {
+          if (!this.multiple && !this.classList.contains('open')) {
+            return;
+          }
+
+          // Prevent propagation to onBlur_ so it doesn't inadvertently remove
+          // the open class.
+          if (!this.multiple && this.classList.contains('open')) {
+            e.stopPropagation();
+          }
+
           var options = [].slice.call(this.options);
-          var clickedOption = typeof e === 'number' ? this.options[e] : e.path[0];
 
-          if (clickedOption) {
-            var isAlreadySelected = clickedOption.getAttribute('selected');
+          var toSelect = e === 'number' ? this.options[e] : e.path[0];
 
-            // All multi-select
+          if (toSelect) {
+            // Allow multi-select
             // TODO: support shift key.
-            if (e.metaKey) {
-              if (isAlreadySelected) {
-                clickedOption.removeAttribute('selected');
-              } else {
-                clickedOption.setAttribute('selected', true);
-              }
+            if (e.metaKey && this.multiple) {
+              toSelect.selected = !toSelect.selected; // Toggle selected.
             } else {
               options.forEach(function(opt) {
-                opt.removeAttribute('selected');
+                opt.selected = false;
               });
-              clickedOption.setAttribute('selected', true);
+              toSelect.selected = true;
             }
           }
 
           this.selectedOptions = options.filter(function(opt, i, arr) {
-            return opt.getAttribute('selected') != null;
+            return opt.selected;
           });
+        },
+        onOpen_: function(e, detail, sender) {
+          // Bomb out if dropdown is already open.
+          if (this.multiple || this.classList.contains('open')) {
+            return;
+          }
 
-          // // TODO: handle multi-select.
-          // this.options.forEach(function(option) {
-          //   option.selected = false;
-          // });
-          // var selectedOption = sender.templateInstance.model.option;
-          // selectedOption.selected = true;
-          // this.selectedIndex = this.options.indexOf(selectedOption);
+          this.classList.add('open');
+          //this.$.container.classList.add('open');
+        },
+        onBlur_: function(e, detail, sender) {
+          if (this.multiple || !this.classList.contains('open')) {
+            return;
+          }
+
+          this.classList.remove('open');
+          // this.$.container.classList.remove('open');
         }
       });
 

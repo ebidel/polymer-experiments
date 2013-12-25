@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <title>select-element-ui-test</title>
+    <script src="../../bower_components/platform/platform.js"></script>
+    <script src="../../tools/test/htmltest.js"></script>
+    <script src="../../node_modules/chai/chai.js"></script>
+    <link rel="import" href="../../elements/select-element.html">
+  </head>
+  <body>
+
+    <select-element id="select1">
+      <x-option>Item 1</x-option>
+      <x-option>Item 2</x-option>
+      <x-option>Item 3</x-option>
+    </select-element>
+
+    <select-element id="selectmulti-default" multiple>
+      <x-option>Item 1</x-option>
+      <x-option>Item 2</x-option>
+      <x-option>Item 3</x-option>
+    </select-element>
+
+    <select-element id="selectmulti-size" multiple size="10">
+      <x-option>Item 1</x-option>
+      <x-option>Item 2</x-option>
+      <x-option>Item 3</x-option>
+    </select-element>
+
+    <script>
+      var assert = chai.assert;
+      document.addEventListener('WebComponentsReady', function() {
+        // select1
+        var s = document.querySelector('#select1');
+        var sMulti = document.querySelector('#selectmulti-default');
+        var sMultiSize = document.querySelector('#selectmulti-size');
+
+        var optionSize = parseInt(getComputedStyle(s.firstElementChild).height);
+        var optionSizeMulti = parseInt(getComputedStyle(sMulti.firstElementChild).height);
+
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          assert.equal(parseInt(getComputedStyle(s).height), optionSize);
+          assert.equal(
+              parseInt(getComputedStyle(sMulti).height), optionSizeMulti * 4);
+          assert.equal(
+              parseInt(getComputedStyle(sMultiSize).height), optionSizeMulti * sMultiSize.size);
+          done();
+        });
+      });
+    </script>
+  </body>
+</html>

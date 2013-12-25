@@ -26,36 +26,47 @@ Author: Eric Bidelman (ebidel@)
 <!-- <script src="bower_components/polymer/polymer.js"></script> -->
 
 <link rel="import" href="elements/select-element.html">
-
-<style>
-polymer-element {
-  display: none;
-}
-</style>
 </head>
 <body unresolved>
-  
-<select-element multiple>
+
+<br><br><br><br>
+
+<select-element>
+  <x-option>Do</x-option>
+  <x-option selected value="reee">Rea asdf asdf</x-option>
+  <x-option selected>Mi</x-option>
+</select-element>
+
+<select form="test">
+  <option>Do</option>
+  <option selected value="reee">Rea asdf asdf</option>
+  <option selected>Mi</option>
+</select>
+
+<br><br><br><br>
+
+<select-element size="14" multiple>
   <x-option>Do</x-option> <!-- Note: <option> doesn't go through the insertion point. -->
-  <x-option selected>Rea asdf asdf</x-option>
-  <x-option>Mi</x-option>
-  <x-option>Fa</x-option>
+  <x-option>Rea asdf asdf</x-option>
+  <x-option selected value="meee">Mi</x-option>
+  <x-option selected>Fa</x-option>
   <x-option>So</x-option>
 </select-element>
 
-<select>
+<select id="multi" size="14" multiple>
   <option>Do</option>
-  <option>Re</option>
-  <option>Mi</option>
-</select>
-
-<select size="4" multiple>
-  <option>Do</option>
-  <option selected>Rea asdf asdf</option>
-  <option>Mi</option>
-  <option>Fa</option>
+  <option>Rea asdf asdf</option>
+  <option selected value="meee">Mi</option>
+  <option selected>Fa</option>
   <option>So</option>
 </select>
+
+<script>
+document.querySelector('#multi').addEventListener('change', function(e) {
+  console.log(e.target, e.target.selectedIndex);
+});
+</script>
+
 
 </body>
 </html>
