@@ -1,0 +1,20 @@
+BUILD LOG
+---------
+Build Time: 2013-06-13T17:21:27
+
+NODEJS INFORMATION
+==================
+nodejs: v0.10.4
+grunt: 0.4.1
+grunt-contrib-clean: 0.4.1
+grunt-contrib-jshint: 0.6.0
+grunt-contrib-nodeunit: 0.2.0
+
+REPO REVISIONS
+==============
+grunt-audit: ccecfe8b5367a24acfaa10453bc3f48619856a8e
+
+BUILD HASHES
+============
+test/fixtures/testing: 0820b32b206b7352858e8903a838ed14319acdfd
+test/fixtures/123: 65e9d53484d28eef5447bc06fe2d754d1090975a
