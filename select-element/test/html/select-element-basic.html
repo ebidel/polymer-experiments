@@ -11,15 +11,23 @@
 
     <select-element id="select1">
       <x-option>Item 1</x-option>
-      <x-option>Item 2</x-option>
+      <x-option name="second">Item 2</x-option>
       <x-option>Item 3</x-option>
       <x-option>Item 4</x-option>
       <li>no supported</li>
     </select-element>
 
+    <select-element id="select-attributes" name="myname" required>
+      <x-option>Item 1</x-option>
+      <x-option>Item 1</x-option>
+    </section>
+
+    <select-element id="select-add">
+    </section>
+
     <select-element id="select-append">
       <x-option>Item 1</x-option>
-      <x-option>Item 2</x-option>
+      <x-option id="seconditem">Item 2</x-option>
     </select-element>
 
     <select-element id="select-someselected">
@@ -50,14 +58,15 @@
           assert.lengthOf(s.options, 4);
           assert.equal(s.selectedIndex, 0);
           assert.lengthOf(s.selectedOptions, 1);
-          assert.equal(s.selectedOptions[0], s.firstElementChild);
+          assert.strictEqual(s.selectedOptions[0], s.firstElementChild);
           assert.equal(s.type, 'select-one');
+          assert.equal(s.name, '');
+          assert.isFalse(s.required);
+          assert.equal(s.value, s.firstElementChild.textContent);
 
           // Try to set read only .type.
           s.type = 'not settable set';
           assert.equal(s.type, 'select-one');
-
-          assert.equal(s.value, s.firstElementChild.textContent);
           
           // Set new valid/invalid .value.
           var secondOption = s.firstElementChild.nextElementSibling;
@@ -66,7 +75,7 @@
           assert.equal(s.value, secondOption.textContent); // valid
           assert.equal(s.selectedIndex, 1);
           assert.lengthOf(s.selectedOptions, 1);
-          assert.equal(s.selectedOptions[0], secondOption);
+          assert.strictEqual(s.selectedOptions[0], secondOption);
 
           s.value = 'somethingnotright'; // invalid
           assert.equal(s.value, '');
@@ -74,7 +83,31 @@
           assert.lengthOf(s.selectedOptions, 0);
 
           assert.isNull(s.form);
+
+          // API
+          assert.strictEqual(s.item(1), secondOption);
+          assert.isNull(s.item(-1)); // invalid
+          assert.strictEqual(s.namedItem('second'), secondOption);
+          assert.isNull(s.namedItem('somethingnotright')); // invalid
+          s.remove(1);
+          assert.lengthOf(s.options, 3);
+          assert.equal([].slice.call(s.options).indexOf(secondOption), -1);
+
+          done();
         });
+
+        // select-attributes - test attributes
+        var sAttributes = document.querySelector('#select-attributes');
+        assert.equal(sAttributes.name, 'myname');
+        assert.isTrue(sAttributes.required);
+
+        // sAttributes.addEventListener('change', function(e) {
+        //   ok('change event was fired');
+        //   done();
+        // });
+
+        // var secondItem = sAttributes.querySelector('#seconditem');
+        // secondItem.click();
 
         // select-append - append new option child.
         var sAppend = document.querySelector('#select-append'); 
@@ -82,15 +115,15 @@
         sAppend.appendChild(xOption);
 
         // Have to wrap because MutationObserver is async...?
-        setTimeout(function() {
+        sAppend.async(function() {
           assert.equal(sAppend.length, 3);
           assert.lengthOf(sAppend.options, 3);
           assert.equal(sAppend.selectedIndex, 0);
           assert.lengthOf(sAppend.selectedOptions, 1);
-          assert.equal(sAppend.selectedOptions[0], sAppend.firstElementChild);
+          assert.strictEqual(sAppend.selectedOptions[0], sAppend.firstElementChild);
 
           done();
-        }, 0);
+        });
 
         // select-someselected
         var ss = document.querySelector('#select-someselected');

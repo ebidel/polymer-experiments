@@ -45,7 +45,13 @@
               parseInt(getComputedStyle(sMulti).height), optionSizeMulti * 4);
           assert.equal(
               parseInt(getComputedStyle(sMultiSize).height), optionSizeMulti * sMultiSize.size);
-          done();
+
+          s.value = 'notvalid';
+          Platform.flush();
+          Platform.endOfMicrotask(function() {
+            assert.equal(getComputedStyle(s.shadowRoot.querySelector('#container')).color, 'rgba(0, 0, 0, 0)');
+            done();
+          });
         });
       });
     </script>

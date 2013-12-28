@@ -21,52 +21,89 @@ Author: Eric Bidelman (ebidel@)
 <meta charset="utf-8" />
 <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
 <title>Polymer implementation of &lt;select> element</title>
-
 <script src="bower_components/platform/platform.js"></script>
-<!-- <script src="bower_components/polymer/polymer.js"></script> -->
-
+<link href="http://fonts.googleapis.com/css?family=Open+Sans:300" rel="stylesheet" type="text/css">
 <link rel="import" href="elements/select-element.html">
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: "Open Sans", sans-serif;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+body {
+  display: -webkit-flex;
+  display: flex !important;
+}
+body > section {
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  padding: 0 2em;
+}
+body > section:first-of-type {
+  border-right: 1px solid #eee;
+}
+h3 {
+  margin-top: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+section > * {
+  margin-bottom: 20px;
+}
+</style>
 </head>
 <body unresolved>
 
-<br><br><br><br>
+<section>
+  <h3>Polymer</h3>
+  <select-element id="single-custom">
+    <x-option>Do</x-option>
+    <x-option selected value="reee">Rea asdf asdf</x-option>
+    <x-option selected>Mi</x-option>
+  </select-element>
+  <select-element size="7" multiple>
+    <x-option>Do</x-option> <!-- Note: <option> doesn't go through the insertion point. -->
+    <x-option name="re">Rea asdf asdf</x-option>
+    <x-option selected value="meee">Mi</x-option>
+    <x-option selected>Fa</x-option>
+    <x-option>So</x-option>
+  </select-element>
+</section>
+<section>
+  <h3>Native</h3>
+  <select id="single" form="test">
+    <option>Do</option>
+    <option selected value="reee" name="re">Rea asdf asdf</option>
+    <option selected>Mi</option>
+  </select>
+  <select id="multi" size="7" multiple>
+    <option>Do</option>
+    <option>Rea asdf asdf</option>
+    <option selected value="meee">Mi</option>
+    <option selected>Fa</option>
+    <option>So</option>
+  </select>
+</section>
 
-<select-element>
-  <x-option>Do</x-option>
-  <x-option selected value="reee">Rea asdf asdf</x-option>
-  <x-option selected>Mi</x-option>
-</select-element>
-
-<select form="test">
-  <option>Do</option>
-  <option selected value="reee">Rea asdf asdf</option>
-  <option selected>Mi</option>
-</select>
-
-<br><br><br><br>
-
-<select-element size="14" multiple>
-  <x-option>Do</x-option> <!-- Note: <option> doesn't go through the insertion point. -->
-  <x-option>Rea asdf asdf</x-option>
-  <x-option selected value="meee">Mi</x-option>
-  <x-option selected>Fa</x-option>
-  <x-option>So</x-option>
-</select-element>
-
-<select id="multi" size="14" multiple>
-  <option>Do</option>
-  <option>Rea asdf asdf</option>
-  <option selected value="meee">Mi</option>
-  <option selected>Fa</option>
-  <option>So</option>
-</select>
-
+<!-- 
 <script>
+document.querySelector('#single-custom').addEventListener('change', function(e) {
+  console.log(e, e.target, e.target.selectedIndex);
+});
 document.querySelector('#multi').addEventListener('change', function(e) {
   console.log(e.target, e.target.selectedIndex);
 });
+document.querySelector('#single').addEventListener('change', function(e) {
+  console.log(e, e.target, e.target.selectedIndex);
+});
 </script>
-
-
+ -->
 </body>
 </html>

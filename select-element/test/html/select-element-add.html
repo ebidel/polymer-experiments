@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+  <head>
+    <title>select-element-basic-add</title>
+    <script src="../../bower_components/platform/platform.js"></script>
+    <script src="../../tools/test/htmltest.js"></script>
+    <script src="../../node_modules/chai/chai.js"></script>
+    <link rel="import" href="../../elements/select-element.html">
+  </head>
+  <body>
+
+    <select-element id="select1">
+      <x-option>Item 1</x-option>
+    </select-element>
+
+    <select-element id="select2">
+      <x-option>Item 1</x-option>
+      <x-option selected>Item 2</x-option>
+    </select-element>
+
+    <select-element id="select3" multiple>
+      <x-option>Item 1</x-option>
+      <x-option selected>Item 2</x-option>
+      <x-option selected>Item 3</x-option>
+    </select-element>
+
+    <select-element id="select4">
+      <x-option>Item 1</x-option>
+      <x-option selected>Item 2</x-option>
+    </select-element>
+
+    <script>
+      var assert = chai.assert;
+      document.addEventListener('WebComponentsReady', function() {
+
+        // select1 - no before param, append to list
+        (function() {
+          var s = document.querySelector('#select1');
+          var opt = document.createElement('x-option');
+          opt.textContent = 'item';
+          s.add(opt);
+          s.async(function() {
+            assert.equal(s.length, 2);
+            assert.lengthOf(s.options, 2);
+            assert.strictEqual(s.lastElementChild, opt);
+
+            done();
+          });
+        })();
+
+        // invalid index
+        (function() {
+          var s = document.createElement('select-element');
+          var opt = document.createElement('x-option');
+          opt.textContent = 'item';
+          s.add(opt, -1); // invalid index
+          s.async(function() {
+            assert.equal(s.length, 1);
+            assert.lengthOf(s.options, 1);
+            assert.strictEqual(s.lastElementChild, opt);
+
+            var opt2 = document.createElement('x-option');
+            opt2.textContent = 'item2';
+            s.add(opt2, 100); // invalid index
+
+            s.async(function() {
+              assert.equal(s.length, 2);
+              assert.lengthOf(s.options, 2);
+              assert.strictEqual(s.lastElementChild, opt2);
+
+              done();
+            });
+          });
+
+        })();
+
+        // select2 - insert at top and end
+        (function() {
+          var s = document.querySelector('#select2');
+          var opt = document.createElement('x-option');
+          opt.textContent = 'item';
+          s.add(opt, 0);
+          s.async(function() {
+            assert.equal(s.length, 3);
+            assert.lengthOf(s.options, 3);
+            assert.equal(s.selectedIndex, 2);
+            assert.strictEqual(s.options[0], opt);
+            assert.strictEqual(s.selectedOptions[0], s.options[2]);
+
+            var opt2 = document.createElement('x-option');
+            opt2.textContent = 'item';
+            s.add(opt2, s.options.length);
+
+            s.async(function() {
+              assert.equal(s.length, 4);
+              assert.lengthOf(s.options, 4);
+              assert.equal(s.selectedIndex, 2);
+              assert.strictEqual(s.lastElementChild, opt2);
+
+              done();
+            });
+          });
+
+        })();
+
+        // select3 - insert new selected item
+        (function() {
+          var s = document.querySelector('#select3');
+          var opt = document.createElement('x-option');
+          opt.selected = true;
+          opt.textContent = 'item';
+          s.add(opt, 0);
+          s.async(function() {
+            assert.equal(s.selectedIndex, 0);
+            assert.lengthOf(s.selectedOptions, 3);
+            assert.equal(s.selectedOptions.indexOf(opt), 0);
+
+            done();
+          });
+
+        })();
+
+        // select4 - insert new selected item to end
+        (function() {
+          var s = document.querySelector('#select4');
+          var opt = document.createElement('x-option');
+          opt.selected = true;
+          opt.textContent = 'item';
+          s.add(opt);
+          s.async(function() {
+            assert.equal(s.selectedIndex, 2);
+            assert.lengthOf(s.selectedOptions, 1);
+            assert.strictEqual(s.lastElementChild, opt);
+
+            done();
+          });
+
+        })();
+
+      });
+    </script>
+  </body>
+</html>

@@ -1,8 +1,14 @@
 <link rel="import" href="../bower_components/polymer/polymer.html">
 
-<!-- TODO: make keyboard navigable -->
+<!--
+TODO:
+- support <optgroup>
+- make keyboard navigable
+- multiple selection with shift
+-->
+<!-- http://www.whatwg.org/specs/web-apps/current-work/multipage/the-button-element.html -->
 
-<polymer-element name="x-option" attributes="selected value" constructor="XOption" noscript>
+<polymer-element name="x-option" attributes="selected value name" constructor="XOption" noscript>
   <template>
     <style>
       :host {
@@ -25,7 +31,7 @@
   </script>
 </polymer-element>
 
-<polymer-element name="select-element" attributes="form multiple size name tabIndex type" constructor="SelectElement" tabindex="0" on-blur="{{onBlur_}}">
+<polymer-element name="select-element" attributes="form multiple size name type required" constructor="SelectElement" tabindex="0" on-blur="{{onBlur_}}">
   <template>
     <style>
       :host {
@@ -40,6 +46,8 @@
         -webkit-user-select: none;
         user-select: none;
         position: relative;
+        white-space: nowrap;
+        position: relative;
       }
       :host(:not([multiple]):not([size]):host) {
         border-radius: 3px;
@@ -48,20 +56,18 @@
         background-size: 5px, contain;
         box-shadow: 0px 0px 1px #222;
         vertical-align: bottom;
-        margin-bottom: 3px;
         height: {{optionsHeight_}}px;
         overflow: auto;
       }
       :host(:not([multiple]):not([size]):host.open) {
         overflow: initial;
-        height: auto;
-        background: white;
-        box-shadow: 3px 5px 15px #aaa, 0 10px 15px #ccc;
         outline: none;
-        padding: 4px 0;
+        /*text-indent: 5px;*/
       }
       :host(:not([multiple]):not([size]):host) ::content > * {
         padding: 1px 17px 2px 5px;
+        /*position: relative;*/
+        display: flex;
       }
       :host(:not([multiple]):not([size]):host.open) ::content > *:hover {
         background-color: #3875d7;
@@ -91,12 +97,26 @@
         color: white;
       }
       :host(:not([multiple]):not([size]):host) #container {
-        /*position: absolute;*/
-        /*overflow: auto;*/
+        position: absolute;
+        border-radius: 3px;
+        box-shadow: 3px 5px 15px #aaa, 0 10px 15px #ccc;
+        outline: none;
+        z-index: 1000;
       }
-      :host(:not([multiple]):not([size]):host) #container.open {
-        /*overflow: initial;*/
-        /*height: auto;*/
+      :host(:not([multiple]):not([size]):host.open) #container {
+        background: white;
+        padding: 4px 0;
+      }
+      :host(:not([multiple]):not([size]):host:not(.open)) .invalid {
+        color: transparent;
+      }
+      :host(:not([multiple]):not([size]):host.open) ::content > *:before {
+        content: '\2713';
+        color: transparent;
+        margin-right: 5px;
+      }
+      :host(:not([multiple]):not([size]):host.open) ::content [selected]:before {
+        color: currentcolor;
       }
     </style>
     <div id="container" on-click="{{onOpen_}}">
@@ -123,24 +143,32 @@
       }
 
       function setupInitialSelected_() {
-        var options = [].slice.call(this.options);
-
         if (!this.options.length) {
           return;
         }
 
-        this.selectedOptions = options.filter(function(opt, i, arr) {
+        this.selectedOptions = [].filter.call(this.options, function(opt, i, arr) {
           return opt.selected;
         });
 
-        // Dropdown case
+        // Dropdown
         if (!this.multiple) {
+          // De-select everything.
+          [].forEach.call(this.options, function(opt) {
+            opt.selected = false;
+            // Removing the attribute shouldn't be necessary, but light DOM
+            // options which are selected by default are keeping the attribute.
+            opt.removeAttribute('selected');
+          });
+
           // Last item with selected attribute is the one to select.
-          // Otherwise, first time is selected by default.
+          // Otherwise, first item is selected by default.
           var numSelected = this.selectedOptions.length; 
-          var opt = numSelected ? this.selectedOptions[numSelected - 1] : options[0];
-          this.selectedOptions = [opt];
-          this.selectedOptions[0].selected = true;
+          var option = numSelected ? this.selectedOptions[numSelected - 1] :
+                                     this.options[0];
+
+          option.selected = true;
+          this.selectedOptions = [option];
         }
       }
 
@@ -149,9 +177,11 @@
         //resetStyleInheritance: true,
         multiple: false,
         size: 0,
-        selectedIndex: -2,
         form: null,
         value_: '',
+        selectedIndex_: -2,
+        name: '',
+        required: false,
         get type() {
           return 'select-' + (this.multiple ? 'multiple' : 'one');
         },
@@ -160,42 +190,90 @@
         },
         set length(val) {
           // TODO: length is settable, update options area if it's not correctly set.
+          // When set to a smaller number, truncates the number of option elements in the select.
+          // When set to a greater number, adds new blank option elements to the select.
+          throw new Error('Setting .length is not implemented');
         },
         get value() {
-          var idx = this.selectedIndex;
+          var idx = this.selectedIndex_;
           return idx > -1 ? this.options[idx].value : '';
         },
         set value(val) {
           this.value_ = val;
 
+          var option = null;
+
           // When .value is set explicitly, make sure it's a valid option, then
           // update selectedOptions/selectedIndex.
           for (var i = 0, opt; opt = this.options[i]; ++i) {
-            opt.selected = false; // Reset all 
+            opt.selected = false; // Reset all
+            //opt.setAttribute('selected');
             if (opt.value == this.value_) {
-              opt.selected = true;
-              this.selectedIndex = i;
-              this.selectedOptions = [opt];
-              return;
+              option = [opt, i];
             }
           }
 
-          // Set to a invalid option.
-          this.selectedIndex = -1;
-          this.selectedOptions = [];
-          this.value_ = '';
+          if (option) {
+            option[0].selected = true;
+            this.selectedIndex_ = option[1];
+            this.selectedOptions = [option[0]];
+          } else {
+            // Set to a invalid option.
+            this.selectedIndex_ = -1;
+            this.selectedOptions = [];
+            this.value_ = '';
+          }
+        },
+        get selectedIndex() {
+          return this.selectedIndex_;
+        },
+        set selectedIndex(val) {
+          // TODO: On setting, the selectedIndex attribute must set the selectedness of all the option elements in the list of options to false, and then the option element in the list of options whose index is the given new value, if any, must have its selectedness set to true and its dirtiness set to true.
+          throw new Error('Setting .selectedIndex is not implemented');
+
+          // this.selectedIndex_ = val;
         },
         add: function(element, opt_before) {
-          //opt_before is optional and can be an element or index to insert element before.
+          // opt_before can be an index of element to insert the new item before.
+          // If opt_before is omitted, null, or a number out of range, then
+          // the element is added at the end of the list.
+          var child;
+          if (opt_before == null || opt_before == undefined ||
+              opt_before < 0 || opt_before > this.options.length) {
+            child = this.appendChild(element);
+          } else {
+            child = this.insertBefore(element, this.options[opt_before]);
+          }
+
+          // Wait for DOM addition.
+          this.async(function() {
+            if (!this.multiple && child.selected) {
+              this.selectedOptions = [child];
+            } else {
+              this.selectedOptions = [].filter.call(this.options, function(opt, i, arr) {
+                return opt.selected;
+              });
+            }
+            Platform.flush();
+          });
+
         },
         remove: function(idx) {
-
+          // Get around HTMLCollection limitations.
+          var options = [].slice.call(this.options);
+          options.splice(idx, 1);
+          this.options = options;
         },
         item: function(idx) {
-
+          return this.options[idx] || null;
         }, 
         namedItem: function(name) {
-
+          for (var i = 0, opt; opt = this.options[i]; ++i) {
+            if (opt.name === name) {
+              return opt;
+            }
+          }
+          return null;
         }, 
         ready: function() {
           this.options = this.$.content.getDistributedNodes();
@@ -212,14 +290,23 @@
 
           if (this.options.length) {
             this.optionsHeight_ = parseInt(getComputedStyle(this.options[0]).height);
+            //this.style.height = this.optionsHeight_ + 'px';
           }
 
           this.sizeChanged(); // Explicitly call to set initial height;
         },
+        selectedIndex_Changed: function() {
+          this.selectedIndex_ == -1 ? this.$.container.classList.add('invalid') :
+                                      this.$.container.classList.remove('invalid');
+        },
         sizeChanged: function() {
           var size = this.size < MIN_SIZE_ ? MIN_SIZE_ : this.size;
-          //this.$.container.style.height = (this.size * ) + 'px';
-          this.containerHeight_ = (size * this.optionsHeight_);
+          //this.async(function() {
+            this.containerHeight_ = (size * this.optionsHeight_);
+          //});
+          // if (this.multiple || this.size) {
+          //   this.style.height = this.containerHeight_ + 'px';
+          // }
         },
         formChanged: function() {
           // Fetch the form element if we're given an id.
@@ -239,21 +326,26 @@
             }
           }
         },
+        optionsChanged: function() {
+          if (!this.options.length || this.multiple) {
+            return;
+          }
+          this.style.width = getComputedStyle(this.options[0]).width;
+        },
         selectedOptionsChanged: function() {
-          var options = [].slice.call(this.options);
-
           if (this.selectedOptions.length) {
-            this.selectedIndex = options.indexOf(this.selectedOptions[0]);
+            var options = [].slice.call(this.options);
+            this.selectedIndex_ = options.indexOf(this.selectedOptions[0]);
 
             // Adjust dropdown offset to selected item.
             if (!this.multiple) {
-              this.options[0].style.marginTop = (-this.optionsHeight_ * this.selectedIndex) + 'px';
+              this.$.container.style.marginTop = (-this.optionsHeight_ * this.selectedIndex_) + 'px';
               this.blur(); // this.onBlur_();
             }
-
           } else {
             // Multi-select defaults to to -1, drop down to first item.
-            this.selectedIndex = this.multiple || !this.options.length ? -1 : 0;
+            //this.selectedIndex_ = this.multiple || !this.options.length ? -1 : 0;
+            this.selectedIndex_ = -1;
           }
         },
         onSelect_: function(e, detail, sender) {
@@ -267,8 +359,6 @@
             e.stopPropagation();
           }
 
-          var options = [].slice.call(this.options);
-
           var toSelect = e === 'number' ? this.options[e] : e.path[0];
 
           if (toSelect) {
@@ -277,16 +367,19 @@
             if (e.metaKey && this.multiple) {
               toSelect.selected = !toSelect.selected; // Toggle selected.
             } else {
-              options.forEach(function(opt) {
+              [].forEach.call(this.options, function(opt) {
                 opt.selected = false;
+                opt.removeAttribute('selected');
               });
               toSelect.selected = true;
             }
           }
 
-          this.selectedOptions = options.filter(function(opt, i, arr) {
+          this.selectedOptions = [].filter.call(this.options, function(opt, i, arr) {
             return opt.selected;
           });
+
+          this.fire('change');
         },
         onOpen_: function(e, detail, sender) {
           // Bomb out if dropdown is already open.
