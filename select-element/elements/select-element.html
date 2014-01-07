@@ -5,6 +5,7 @@ TODO:
 - support <optgroup>
 - make keyboard navigable
 - multiple selection with shift
+- selectedIndex is incorrectly going from multiple to single
 -->
 <!-- http://www.whatwg.org/specs/web-apps/current-work/multipage/the-button-element.html -->
 
@@ -31,7 +32,7 @@ TODO:
   </script>
 </polymer-element>
 
-<polymer-element name="select-element" attributes="form multiple size name type required" constructor="SelectElement" tabindex="0" on-blur="{{onBlur_}}">
+<polymer-element name="select-element" attributes="form multiple size name type required" constructor="SelectElement" tabindex="0" on-blur="{{onBlur_}}" on-click="{{onOpen_}}">
   <template>
     <style>
       :host {
@@ -40,7 +41,7 @@ TODO:
         box-sizing: border-box;
         cursor: default;
         font: 11px/normal 'Lucida Grande';
-        margin: 2px;
+        margin: 3px;
         outline: normal;
         -moz-user-select: none;
         -webkit-user-select: none;
@@ -48,6 +49,7 @@ TODO:
         position: relative;
         white-space: nowrap;
         position: relative;
+        min-width: {{containerMinWidth_}}px;
       }
       :host(:not([multiple]):not([size]):host) {
         border-radius: 3px;
@@ -62,11 +64,9 @@ TODO:
       :host(:not([multiple]):not([size]):host.open) {
         overflow: initial;
         outline: none;
-        /*text-indent: 5px;*/
       }
       :host(:not([multiple]):not([size]):host) ::content > * {
-        padding: 1px 17px 2px 5px;
-        /*position: relative;*/
+        padding: 1px 24px 2px 7px;
         display: flex;
       }
       :host(:not([multiple]):not([size]):host.open) ::content > *:hover {
@@ -82,7 +82,7 @@ TODO:
         overflow-y: auto;
       }
       ::content > * {
-        padding: 0 20px 1px 2px;
+        padding: 0 24px 1px 2px;
         padding-right: 20px;
         box-sizing: border-box;
       }
@@ -99,13 +99,16 @@ TODO:
       :host(:not([multiple]):not([size]):host) #container {
         position: absolute;
         border-radius: 3px;
-        box-shadow: 3px 5px 15px #aaa, 0 10px 15px #ccc;
         outline: none;
         z-index: 1000;
       }
       :host(:not([multiple]):not([size]):host.open) #container {
         background: white;
         padding: 4px 0;
+        box-shadow: 3px 5px 15px #aaa, 0 10px 15px #ccc;
+      }
+      #container.spanfull {
+        width: 100%;
       }
       :host(:not([multiple]):not([size]):host:not(.open)) .invalid {
         color: transparent;
@@ -119,7 +122,7 @@ TODO:
         color: currentcolor;
       }
     </style>
-    <div id="container" on-click="{{onOpen_}}">
+    <div id="container">
       <content id="content" select="x-option" on-click="{{onSelect_}}"></content>
     </div>
   </template>
@@ -147,19 +150,12 @@ TODO:
           return;
         }
 
-        this.selectedOptions = [].filter.call(this.options, function(opt, i, arr) {
-          return opt.selected;
-        });
+        this.selectedOptions = filterSelected_(this.options);
 
         // Dropdown
-        if (!this.multiple) {
+        if (!(this.multiple || this.size)) {
           // De-select everything.
-          [].forEach.call(this.options, function(opt) {
-            opt.selected = false;
-            // Removing the attribute shouldn't be necessary, but light DOM
-            // options which are selected by default are keeping the attribute.
-            opt.removeAttribute('selected');
-          });
+          deselectAll_(this.options);
 
           // Last item with selected attribute is the one to select.
           // Otherwise, first item is selected by default.
@@ -168,13 +164,27 @@ TODO:
                                      this.options[0];
 
           option.selected = true;
+          option.setAttribute('selected', ''); // affect light dom as well to pick up checkboxes
           this.selectedOptions = [option];
         }
       }
 
+      function filterSelected_(opts) {
+        return [].filter.call(opts, function(opt, i, arr) {
+          return opt.selected;
+        });
+      }
+
+      function deselectAll_(opts) {
+        [].forEach.call(opts, function(opt) {
+          opt.selected = false;
+          // Removing the attribute shouldn't be necessary, but light DOM
+          // options which are selected by default are keeping the attribute.
+          opt.removeAttribute('selected');
+        });
+      }
+
       Polymer('select-element', {
-        //applyAuthorStyles: true,
-        //resetStyleInheritance: true,
         multiple: false,
         size: 0,
         form: null,
@@ -230,7 +240,6 @@ TODO:
         set selectedIndex(val) {
           // TODO: On setting, the selectedIndex attribute must set the selectedness of all the option elements in the list of options to false, and then the option element in the list of options whose index is the given new value, if any, must have its selectedness set to true and its dirtiness set to true.
           throw new Error('Setting .selectedIndex is not implemented');
-
           // this.selectedIndex_ = val;
         },
         add: function(element, opt_before) {
@@ -247,12 +256,10 @@ TODO:
 
           // Wait for DOM addition.
           this.async(function() {
-            if (!this.multiple && child.selected) {
+            if (!(this.multiple || this.size) && child.selected) {
               this.selectedOptions = [child];
             } else {
-              this.selectedOptions = [].filter.call(this.options, function(opt, i, arr) {
-                return opt.selected;
-              });
+              this.selectedOptions = filterSelected_(this.options);
             }
             Platform.flush();
           });
@@ -288,25 +295,33 @@ TODO:
           // Explicitly call to potentially find the form element from the id.
           this.formChanged();
 
+          this.adjustContainerHeights_();
+        },
+        adjustContainerHeights_: function() {
           if (this.options.length) {
             this.optionsHeight_ = parseInt(getComputedStyle(this.options[0]).height);
-            //this.style.height = this.optionsHeight_ + 'px';
           }
 
-          this.sizeChanged(); // Explicitly call to set initial height;
+          var size = this.size < MIN_SIZE_ ? MIN_SIZE_ : this.size;
+          this.containerHeight_ = (size * this.optionsHeight_);
+
+          if (this.multiple || this.size) {
+            this.$.container.style.marginTop = '0px';
+          } else {
+            this.$.container.style.marginTop = (-this.optionsHeight_ * this.selectedIndex_) + 'px';
+          }
         },
         selectedIndex_Changed: function() {
           this.selectedIndex_ == -1 ? this.$.container.classList.add('invalid') :
                                       this.$.container.classList.remove('invalid');
         },
         sizeChanged: function() {
-          var size = this.size < MIN_SIZE_ ? MIN_SIZE_ : this.size;
-          //this.async(function() {
-            this.containerHeight_ = (size * this.optionsHeight_);
-          //});
-          // if (this.multiple || this.size) {
-          //   this.style.height = this.containerHeight_ + 'px';
-          // }
+          this.adjustContainerHeights_();
+          setupInitialSelected_.bind(this)();
+        },
+        multipleChanged: function() {
+          this.adjustContainerHeights_();
+          setupInitialSelected_.bind(this)();
         },
         formChanged: function() {
           // Fetch the form element if we're given an id.
@@ -327,10 +342,16 @@ TODO:
           }
         },
         optionsChanged: function() {
-          if (!this.options.length || this.multiple) {
-            return;
+          if (this.options.length && !(this.multiple || this.size)) {
+            // Need to explicitly set container(s) width.
+            this.containerMinWidth_ = parseInt(getComputedStyle(this.options[0]).width);
+
+            // If select is stretching, dropdown overlay should fill entire space.
+            if (parseInt(getComputedStyle(this).width) >
+                parseInt(getComputedStyle(this.$.container).width)) {
+              this.$.container.classList.add('spanfull');
+            }
           }
-          this.style.width = getComputedStyle(this.options[0]).width;
         },
         selectedOptionsChanged: function() {
           if (this.selectedOptions.length) {
@@ -338,9 +359,9 @@ TODO:
             this.selectedIndex_ = options.indexOf(this.selectedOptions[0]);
 
             // Adjust dropdown offset to selected item.
-            if (!this.multiple) {
-              this.$.container.style.marginTop = (-this.optionsHeight_ * this.selectedIndex_) + 'px';
-              this.blur(); // this.onBlur_();
+            if (!(this.multiple || this.size)) {
+              this.adjustContainerHeights_(); // adjusts margin offset of select item.
+              this.blur();
             }
           } else {
             // Multi-select defaults to to -1, drop down to first item.
@@ -349,13 +370,13 @@ TODO:
           }
         },
         onSelect_: function(e, detail, sender) {
-          if (!this.multiple && !this.classList.contains('open')) {
+          if (!(this.multiple || this.size) && !this.classList.contains('open')) {
             return;
           }
 
           // Prevent propagation to onBlur_ so it doesn't inadvertently remove
           // the open class.
-          if (!this.multiple && this.classList.contains('open')) {
+          if (!(this.multiple || this.size) && this.classList.contains('open')) {
             e.stopPropagation();
           }
 
@@ -364,39 +385,33 @@ TODO:
           if (toSelect) {
             // Allow multi-select
             // TODO: support shift key.
-            if (e.metaKey && this.multiple) {
+            if (e.metaKey && (this.multiple || this.size)) {
               toSelect.selected = !toSelect.selected; // Toggle selected.
             } else {
-              [].forEach.call(this.options, function(opt) {
-                opt.selected = false;
-                opt.removeAttribute('selected');
-              });
+              deselectAll_(this.options);
               toSelect.selected = true;
+              toSelect.setAttribute('selected', '');
             }
           }
 
-          this.selectedOptions = [].filter.call(this.options, function(opt, i, arr) {
-            return opt.selected;
-          });
+          this.selectedOptions = filterSelected_(this.options);
 
           this.fire('change');
         },
         onOpen_: function(e, detail, sender) {
           // Bomb out if dropdown is already open.
-          if (this.multiple || this.classList.contains('open')) {
+          if (this.multiple || this.size || this.classList.contains('open')) {
             return;
           }
-
+console.log(sender)
           this.classList.add('open');
-          //this.$.container.classList.add('open');
         },
         onBlur_: function(e, detail, sender) {
-          if (this.multiple || !this.classList.contains('open')) {
+          if (this.multiple || this.size || !this.classList.contains('open')) {
             return;
           }
 
           this.classList.remove('open');
-          // this.$.container.classList.remove('open');
         }
       });
 

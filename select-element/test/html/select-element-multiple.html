@@ -29,6 +29,12 @@
       <x-option selected>Item 3</x-option>
     </select-element>
 
+    <select-element id="select4" multiple>
+      <x-option>Item 1</x-option>
+      <x-option selected class="item">Item 2</x-option>
+      <x-option selected>Item 3</x-option>
+    </select-element>
+
     <script>
       var assert = chai.assert;
       document.addEventListener('WebComponentsReady', function() {
@@ -74,6 +80,23 @@
           assert.equal(getComputedStyle(option).backgroundColor, 'rgb(212, 212, 212)');
 
           done();
+        });
+
+        // select4 - change from multiple to dropdown
+        var s4 = document.querySelector('#select4');
+        s4.multiple = false;
+        Platform.flush();
+        Platform.endOfMicrotask(function() {
+          s4.async(function() {
+            assert.lengthOf(s4.selectedOptions, 1);
+            assert.equal(s4.selectedOptions[0], s4.querySelector('.item'));
+            assert.equal(s4.selectedIndex, 1);
+
+            var optionSize = parseInt(getComputedStyle(s.firstElementChild).height);
+            assert.equal(parseInt(getComputedStyle(s4).height), optionSize);
+
+            done();
+          }, null, 10);
         });
 
       });
