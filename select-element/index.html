@@ -22,7 +22,7 @@ Author: Eric Bidelman (ebidel@)
 <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
 <title>Polymer implementation of &lt;select> element</title>
 <script src="bower_components/platform/platform.js"></script>
-<link href="http://fonts.googleapis.com/css?family=Open+Sans:300|Source+Code+Pro" rel="stylesheet" type="text/css">
+<link href="//fonts.googleapis.com/css?family=Open+Sans:300|Source+Code+Pro" rel="stylesheet" type="text/css">
 <link rel="import" href="elements/select-element.html">
 <style>
 html, body {
@@ -88,6 +88,17 @@ h1 {
 }
 summary {
   margin-bottom: 3em;
+}
+#support {
+  display: none;
+  color: white;
+  font-weight: bold;
+  padding: 15px;
+  background-color: red;
+  border-radius: 5px;
+}
+#support.show {
+  display: block;
 }
 </style>
 </head>
@@ -178,6 +189,10 @@ summary {
   </section>
 </article>
 
+<div id="support">
+  This demo requires native <a href="http://www.polymer-project.org/platform/shadow-dom.html">Shadow DOM</a> support. Try Chrome Canary with "Experiemental Web Platform features" enabled in about:flags.
+</div>
+
 <p><a href="test/runner.html">Run tests</a> | <a href="https://github.com/ebidel/polymer-experiments/tree/master/select-element">Code</a></p>
 
 <script>
@@ -222,6 +237,10 @@ document.addEventListener('WebComponentsReady', function(e) {
   });
 
 });
+
+if (!('createShadowRoot' in document.body)) {
+  document.querySelector('#support').classList.add('show');
+}
 
 // document.querySelector('#single-custom').addEventListener('change', function(e) {
 //   e.target.selectedIndex);
