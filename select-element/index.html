@@ -22,7 +22,7 @@ Author: Eric Bidelman (ebidel@)
 <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
 <title>Polymer implementation of &lt;select> element</title>
 <script src="bower_components/platform/platform.js"></script>
-<link href="http://fonts.googleapis.com/css?family=Open+Sans:300" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=Open+Sans:300|Source+Code+Pro" rel="stylesheet" type="text/css">
 <link rel="import" href="elements/select-element.html">
 <style>
 html, body {
@@ -30,80 +30,207 @@ html, body {
   padding: 0;
   height: 100%;
   font-family: "Open Sans", sans-serif;
+}
+body {
+  display: -webkit-flex;
+  display: flex !important; /* needed to combat layout FOUC from Polymer */
   -webkit-justify-content: center;
   justify-content: center;
   -webkit-align-items: center;
   align-items: center;
+  -webkit-flex-direction: column;
+  flex-direction: column;
 }
-body {
+article {
   display: -webkit-flex;
-  display: flex !important;
+  display: flex;
+  width: 700px;
 }
-body > section {
+section {
   display: -webkit-flex;
   display: flex;
   -webkit-flex-direction: column;
   flex-direction: column;
   padding: 0 2em;
+  margin-bottom: 2em;
+  -webkit-flex: 1;
+  flex: 1;
 }
-body > section:first-of-type {
+section:first-of-type {
   border-right: 1px solid #eee;
 }
-h3 {
-  margin-top: 0;
-  text-align: center;
-  text-transform: uppercase;
+section:last-of-type {
+  -webkit-flex: 3;
+  flex: 3;
 }
-section > * {
-  margin-bottom: 20px;
+pre, code {
+  font-family: 'Source Code Pro', sans-serif;
+  margin: 0;
+}
+#codesnippet {
+  font-size: 20px;
+  margin-bottom: 0.7em;
+  margin-top: 5px;
+}
+h1 {
+  font-size: 35px;
+  margin-top: 0;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1;
+}
+.toggler {
+  cursor: pointer;
+  transition: all 300ms ease-in-out;
+}
+.toggler.fade {
+  opacity: 0.3;
+}
+summary {
+  margin-bottom: 3em;
 }
 </style>
 </head>
 <body unresolved>
 
-<section>
-  <h3>Polymer</h3>
-  <select-element id="single-custom">
-    <x-option>Do</x-option>
-    <x-option selected value="reee">Rea asdf asdf</x-option>
-    <x-option selected>Mi</x-option>
-  </select-element>
-  <select-element size="7" multiple>
-    <x-option>Do</x-option> <!-- Note: <option> doesn't go through the insertion point. -->
-    <x-option name="re">Rea asdf asdf</x-option>
-    <x-option selected value="meee">Mi</x-option>
-    <x-option selected>Fa</x-option>
-    <x-option>So</x-option>
-  </select-element>
-</section>
-<section>
-  <h3>Native</h3>
-  <select id="single" form="test">
-    <option>Do</option>
-    <option selected value="reee" name="re">Rea asdf asdf</option>
-    <option selected>Mi</option>
-  </select>
-  <select id="multi" size="7" multiple>
-    <option>Do</option>
-    <option>Rea asdf asdf</option>
-    <option selected value="meee">Mi</option>
-    <option selected>Fa</option>
-    <option>So</option>
-  </select>
-</section>
+<a href="https://github.com/ebidel/polymer-experiments/tree/master/select-element">
+  <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
+</a>
 
-<!-- 
+<summary>
+  <b>"Explaining the web platform"</b>
+  <div>re-implementing HTML's &lt;select&gt; element using <a href="http://www.polymer-project.org">Polymer</a> and web components.</div>
+</summary>
+
+<article>
+  <section>
+    <h1>Polymer</h1>
+    <select-element name="customselect" id="single-custom">
+      <x-option>Do</x-option> <!-- Note: <option> doesn't go through the insertion point. -->
+      <x-option name="re" value="re">Re re re re re</x-option>
+      <x-option selected value="meee">Mi</x-option>
+      <x-option>Fa</x-option>
+      <x-option>So</x-option>
+    </select-element>
+    <!-- <select-element size="7" multiple>
+      <x-option>Do</x-option>
+      <x-option name="re" value="re">Re re re re re</x-option>
+      <x-option selected value="meee">Mi</x-option>
+      <x-option selected>Fa</x-option>
+      <x-option>So</x-option>
+    </select-element> -->
+  </section>
+    <section>
+    <pre id="codesnippet">
+&lt;select-element <label class="toggler fade" data-select="single-custom">multiple</label>&gt;
+    </pre>
+    <template id="single-custom-template" bind="{{select}}">
+      <pre>
+.form = {{form}}
+.name = "{{name}}"
+.type = "{{type}}"
+.multiple = {{multiple}}
+.options.length = {{options.length}}
+.value = "{{value}}"
+.length = {{length}}
+.selectedIndex = {{selectedIndex}}
+.selectedOptions.length = {{selectedOptions.length}}
+      </pre>
+    </template>
+  </section>
+</article>
+
+<article>
+  <section>
+    <h1>Native</h1>
+    <select id="single" name="nativeselect">
+      <option>Do</option>
+      <option value="re">Re re re re re</option>
+      <option selected value="meee">Mi</option>
+      <option>Fa</option>
+      <option>So</option>
+    </select>
+    <!-- <select id="multi" size="7" multiple>
+      <option>Do</option>
+      <option value="re">Re re re re re</option>
+      <option selected value="meee">Mi</option>
+      <option selected>Fa</option>
+      <option>So</option>
+    </select> -->
+  </section>
+  <section>
+    <pre id="codesnippet">
+&lt;select <label class="toggler fade">multiple</label>&gt;
+    </pre>
+    <template id="single-template" bind="{{select}}">
+      <pre>
+.form = {{form}}
+.name = "{{name}}"
+.type = "{{type}}"
+.multiple = {{multiple}}
+.options.length = {{options.length}}
+.value = "{{value}}"
+.length = {{length}}
+.selectedIndex = {{selectedIndex}}
+.selectedOptions.length = {{selectedOptions.length}}
+      </pre>
+    </template>
+  </section>
+</article>
+
 <script>
-document.querySelector('#single-custom').addEventListener('change', function(e) {
-  console.log(e, e.target, e.target.selectedIndex);
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+ (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+ m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+ })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+ ga('create', 'UA-43475701-1', 'ebidel.github.io');
+ ga('send', 'pageview');
+
+
+document.addEventListener('WebComponentsReady', function(e) {
+  var select = document.querySelector('#single-custom');
+  var selectNative = document.querySelector('#single');
+
+  var selectTemplate = document.querySelector('#single-custom-template');
+  selectTemplate.model = {
+    select: select
+  };
+  var selectNativeTemplate = document.querySelector('#single-template');
+  selectNativeTemplate.model = {
+    select: selectNative
+  };
+
+  document.body.addEventListener('click', function(e) {
+    if (e.target.classList.contains('toggler')) {
+      e.target.classList.toggle('fade');
+
+      var attr = e.target.textContent;
+      switch (attr) {
+        case 'multiple':
+          // select.multiple = !select.multiple;
+          // selectNative.multiple = !selectNative.multiple;
+          var el = e.target.dataset.select == 'single-custom' ? select : selectNative;
+          el.multiple = !el.multiple;
+          break;
+        default:
+          break;
+      }
+    }
+  });
+
 });
-document.querySelector('#multi').addEventListener('change', function(e) {
-  console.log(e.target, e.target.selectedIndex);
-});
-document.querySelector('#single').addEventListener('change', function(e) {
-  console.log(e, e.target, e.target.selectedIndex);
-});
+
+// document.querySelector('#single-custom').addEventListener('change', function(e) {
+//   e.target.selectedIndex);
+// });
+// document.querySelector('#multi').addEventListener('change', function(e) {
+//   console.log(e.target, e.target.selectedIndex);
+// });
+// document.querySelector('#single').addEventListener('change', function(e) {
+//   console.log(e, e.target, e.target.selectedIndex);
+// });
 </script>
- -->
+
 </body>
 </html>
