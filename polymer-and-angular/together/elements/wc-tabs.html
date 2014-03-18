@@ -1,4 +1,4 @@
-<link rel="import" href="../../../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/polymer/polymer.html">
 
 <!-- This version utilizes more Shadow DOM features (e.g. <content>)
      and Polymer features (e.g. on-*, <property>Changed handlers)-->
@@ -72,13 +72,6 @@
 <polymer-element name="wc-tabs" attributes="heading">
 <template>
   <link rel="stylesheet" href="../css/tabs.css"/>
-  <!--<style>
-    @host {
-      :scope {
-        /* Instead, can fill me with the styles in tabs.css */
-      }
-    }
-  </style>-->
   <aside>{{heading}}</aside>
   <div class="tab-wrapper">
     <template repeat="{{panel in panels}}">
@@ -91,7 +84,6 @@
 </template>
 <script>
   Polymer('wc-tabs', {
-    //applyAuthorStyles: true,
     heading: '',
     ready: function() {
       this.panels = [].slice.call(this.children);

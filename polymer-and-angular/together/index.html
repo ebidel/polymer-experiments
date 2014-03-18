@@ -5,7 +5,7 @@
 <title>Angular JS and Polymer sitting in a tree</title>
 
 <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.1.5/angular.min.js"></script>
-<script src="../../bower_components/platform/platform.js"></script>
+<script src="bower_components/platform/platform.js"></script>
 
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto+Slab:400,700)"/>
 <link rel="stylesheet" href="css/app.css"/>
@@ -68,6 +68,9 @@
 
 <script src="directives.js"></script>
 <script>
+(function() {
+var wcTabs = null;
+
 function fetchCode(selector, url, opt_responseType) {
   var responseType = opt_responseType || '';
 
@@ -87,8 +90,8 @@ function fetchCode(selector, url, opt_responseType) {
   xhr.send();
 }
 
-document.addEventListener('WebComponentsReady', function(e) {
-  var wcTabs = document.querySelector('wc-tabs');
+document.addEventListener('polymer-ready', function(e) {
+  wcTabs = document.querySelector('wc-tabs');
   wcTabs.querySelector('pre:first-of-type').textContent = wcTabs.outerHTML;
 
   fetchCode('wc-tabs wc-panel:last-of-type pre', 'elements/wc-tabs.html', 'document');
@@ -105,7 +108,9 @@ document.querySelector('#addlightdom').addEventListener('click', function(e) {
   panel.heading = Math.random();
   panel.textContent = panel.heading;
   wcTabs.appendChild(panel);
-})
+});
+
+})();
 </script>
 <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
