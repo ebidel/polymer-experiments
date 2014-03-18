@@ -1,0 +1,9 @@
+{
+  "name": "core-component-page",
+  "private": true,
+  "dependencies": {
+    "platform": "Polymer/platform#master",
+    "core-action-icons": "Polymer/core-action-icons#master",
+    "polymer-ui-action-icons": "Polymer/polymer-ui-action-icons#master"  
+  }
+}
