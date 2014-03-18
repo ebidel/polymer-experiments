@@ -29,7 +29,7 @@
 
     <script>
       var assert = chai.assert;
-      document.addEventListener('WebComponentsReady', function() {
+      document.addEventListener('polymer-ready', function() {
         // select1
         var s = document.querySelector('#select1');
         var sMulti = document.querySelector('#selectmulti-default');
@@ -49,7 +49,7 @@
           s.value = 'notvalid';
           Platform.flush();
           Platform.endOfMicrotask(function() {
-            assert.equal(getComputedStyle(s.shadowRoot.querySelector('#container')).color, 'rgba(0, 0, 0, 0)');
+            assert.equal(getComputedStyle(s.shadowRoot.querySelector('#container')).color, 'rgb(0, 0, 0)');
             done();
           });
         });

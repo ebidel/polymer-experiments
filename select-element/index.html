@@ -100,6 +100,10 @@ summary {
 #support.show {
   display: block;
 }
+.help {
+  font-size: 14px;
+  font-style: italic;
+}
 </style>
 </head>
 <body unresolved>
@@ -110,7 +114,7 @@ summary {
 
 <summary>
   <b>"Explaining the web platform"</b>
-  <div>re-implementing HTML's &lt;select&gt; element using <a href="http://www.polymer-project.org">Polymer</a> and web components.</div>
+  <div>re-implementing HTML's &lt;select&gt; element using <a href="http://www.polymer-project.org">Polymer</a> / web components.</div>
 </summary>
 
 <article>
@@ -132,10 +136,11 @@ summary {
     </select-element> -->
   </section>
     <section>
+    <span class="help">( click the "multiple" attribute to toggle it. )</span>
     <pre id="codesnippet">
 &lt;select-element <label class="toggler fade" data-select="single-custom">multiple</label>&gt;
     </pre>
-    <template id="single-custom-template" bind="{{select}}">
+    <template id="single-custom-template" bind="{{selectEl}}">
       <pre>
 .form = {{form}}
 .name = "{{name}}"
@@ -173,7 +178,7 @@ summary {
     <pre id="codesnippet">
 &lt;select <label class="toggler fade">multiple</label>&gt;
     </pre>
-    <template id="single-template" bind="{{select}}">
+    <template id="single-template" bind="{{selectEl}}">
       <pre>
 .form = {{form}}
 .name = "{{name}}"
@@ -188,6 +193,10 @@ summary {
     </template>
   </section>
 </article>
+
+<div class="help">
+  Click the "multiple" attribute on the elements to toggle it. Also note, under <code>Object.observe()</code>, these properties won't update.</span>
+</div>
 
 <div id="support">
   This demo requires native <a href="http://www.polymer-project.org/platform/shadow-dom.html">Shadow DOM</a> support. Try Chrome Canary with "Experimental Web Platform features" enabled in about:flags.
@@ -205,17 +214,17 @@ summary {
  ga('send', 'pageview');
 
 
-document.addEventListener('WebComponentsReady', function(e) {
+document.addEventListener('polymer-ready', function(e) {
   var select = document.querySelector('#single-custom');
   var selectNative = document.querySelector('#single');
 
   var selectTemplate = document.querySelector('#single-custom-template');
   selectTemplate.model = {
-    select: select
+    selectEl: select
   };
   var selectNativeTemplate = document.querySelector('#single-template');
   selectNativeTemplate.model = {
-    select: selectNative
+    selectEl: selectNative
   };
 
   document.body.addEventListener('click', function(e) {

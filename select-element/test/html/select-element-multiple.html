@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>select-element-mulltiple-test</title>
+    <title>select-element-multiple-test</title>
     <script src="../../bower_components/platform/platform.js"></script>
     <script src="../../tools/test/htmltest.js"></script>
     <script src="../../node_modules/chai/chai.js"></script>
@@ -37,7 +37,7 @@
 
     <script>
       var assert = chai.assert;
-      document.addEventListener('WebComponentsReady', function() {
+      document.addEventListener('polymer-ready', function() {
         // select1 - basic defaults for multiple
         var s = document.querySelector('#select1');
         Platform.flush();
@@ -92,11 +92,12 @@
             assert.equal(s4.selectedOptions[0], s4.querySelector('.item'));
             assert.equal(s4.selectedIndex, 1);
 
+            // Make sure UI did the switch.
             var optionSize = parseInt(getComputedStyle(s.firstElementChild).height);
             assert.equal(parseInt(getComputedStyle(s4).height), optionSize);
 
             done();
-          }, null, 10);
+          }, null, 20);
         });
 
       });
