@@ -6,10 +6,16 @@ TODO:
 - make keyboard navigable
 - multiple selection with shift
 - selectedIndex is incorrectly going from multiple to single
+
+UI polish
+- selected item double flashes to confirm select before overlay closes.
+- overlay fades out on close
+- top margin of dropdown overlay needs adjusting when open. selected item should
+  be on same line as closed state
 -->
 <!-- http://www.whatwg.org/specs/web-apps/current-work/multipage/the-button-element.html -->
 
-<polymer-element name="x-option" attributes="selected value name" constructor="XOption" noscript>
+<polymer-element name="x-option" attributes="selected value name" constructor="XOption">
   <template>
     <style>
       :host {
@@ -48,10 +54,9 @@ TODO:
         user-select: none;
         position: relative;
         white-space: nowrap;
-        position: relative;
         min-width: {{containerMinWidth_}}px;
       }
-      :host(:not([multiple]):not([size]):host) {
+      :host(:not([multiple]):not([size])) {
         border-radius: 3px;
         background: url(../img/arrows.png) no-repeat 94% 50%,
                     -webkit-linear-gradient(top, white 40%, #eee 60%) no-repeat 50% 50%;
@@ -61,64 +66,67 @@ TODO:
         height: {{optionsHeight_}}px;
         overflow: auto;
       }
-      :host(:not([multiple]):not([size]):host.open) {
+      :host(:not([multiple]):not([size]).open) {
         overflow: initial;
         outline: none;
       }
-      :host(:not([multiple]):not([size]):host) ::content > * {
+      :host(:not([multiple]):not([size])) content /content/ * {
         padding: 1px 24px 2px 7px;
         display: flex;
+        margin-left: 0;
       }
-      :host(:not([multiple]):not([size]):host.open) ::content > *:hover {
+      :host(:not([multiple]):not([size]).open) content /content/ *:hover {
         background-color: #3875d7;
         color: white;
       }
-      :host([size]:host),
-      :host([multiple]:host),
-      :host([size][multiple]:host) {
+      :host([size]),
+      :host([multiple]),
+      :host([size][multiple]) {
         border: 1px inset #999999;
         height: {{containerHeight_}}px;
         vertical-align: top;
         overflow-y: auto;
       }
-      ::content > * {
-        padding: 0 24px 1px 2px;
+      content /content/ * {
+        padding: 0 24px 1px 3px;
         padding-right: 20px;
         box-sizing: border-box;
+        width: 100%;
+        margin-left: -1px;
       }
-      :host([multiple]:host) ::content [selected],
-      :host([size]:host) ::content [selected] {
+      :host([multiple]) content /content/ [selected],
+      :host([size]) /content/ [selected] {
         background-color: rgb(212,212,212);
         color: black;
       }
-      :host([multiple]:host:focus) ::content [selected],
-      :host([size]:host:focus) ::content [selected] {
+      :host([multiple]:focus) content /content/ [selected],
+      :host([size]:focus) content /content/ [selected] {
         background-color: #3875d7;
         color: white;
       }
-      :host(:not([multiple]):not([size]):host) #container {
+      :host(:not([multiple]):not([size])) #container {
         position: absolute;
         border-radius: 3px;
         outline: none;
         z-index: 1000;
       }
-      :host(:not([multiple]):not([size]):host.open) #container {
-        background: white;
+      :host(:not([multiple]):not([size]).open) #container {
+        background: rgba(255, 255, 255, 0.95);
         padding: 4px 0;
         box-shadow: 3px 5px 15px #aaa, 0 10px 15px #ccc;
       }
       #container.spanfull {
         width: 100%;
       }
-      :host(:not([multiple]):not([size]):host:not(.open)) .invalid {
+      :host(:not([multiple]):not([size]):not(.open)) .invalid {
         color: transparent;
       }
-      :host(:not([multiple]):not([size]):host.open) ::content > *:before {
+      :host(:not([multiple]):not([size]).open) content /content/ *:before {
         content: '\2713';
         color: transparent;
         margin-right: 5px;
       }
-      :host(:not([multiple]):not([size]):host.open) ::content [selected]:before {
+      :host(:not([multiple]):not([size]).open) content /content/ [selected]:before {
         color: currentcolor;
       }
     </style>
@@ -289,13 +297,14 @@ TODO:
           // Handle add/remove light DOM options w/ MutationObserver.
           monitorChildren_.bind(this)();
 
-          // Finds <x-option selected> in light DOM.
-          setupInitialSelected_.bind(this)();
-
           // Explicitly call to potentially find the form element from the id.
           this.formChanged();
 
-          this.adjustContainerHeights_();
+          this.async(function() {
+            // Finds <x-option selected> in light DOM.
+            setupInitialSelected_.bind(this)();
+            this.adjustContainerHeights_();
+          });
         },
         adjustContainerHeights_: function() {
           if (this.options.length) {
@@ -344,7 +353,8 @@ TODO:
         optionsChanged: function() {
           if (this.options.length && !(this.multiple || this.size)) {
             // Need to explicitly set container(s) width.
-            this.containerMinWidth_ = parseInt(getComputedStyle(this.options[0]).width);
+            this.containerMinWidth_ = Math.min(
+                parseInt(getComputedStyle(this.options[0]).width), 100);
 
             // If select is stretching, dropdown overlay should fill entire space.
             if (parseInt(getComputedStyle(this).width) >
@@ -403,7 +413,11 @@ TODO:
           if (this.multiple || this.size || this.classList.contains('open')) {
             return;
           }
-console.log(sender)
+
+          // Adjust top margin of selected item so it remains on the same line
+          // as it is when the dropdown is closed.
+          // this.$.container.style.marginTop = (parseInt(this.$.container.style.marginTop) - 4) + 'px';
+
           this.classList.add('open');
         },
         onBlur_: function(e, detail, sender) {
@@ -411,6 +425,7 @@ console.log(sender)
             return;
           }
 
+          // this.$.container.style.marginTop = (parseInt(this.$.container.style.marginTop) + 4) + 'px';
           this.classList.remove('open');
         }
       });
