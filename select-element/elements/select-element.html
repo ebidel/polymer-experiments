@@ -70,12 +70,12 @@ UI polish
         overflow: initial;
         outline: none;
       }
-      :host(:not([multiple]):not([size])) content /content/ * {
+      :host(:not([multiple]):not([size])) ::content * {
         padding: 1px 24px 2px 7px;
         display: flex;
         margin-left: 0;
       }
-      :host(:not([multiple]):not([size]).open) content /content/ *:hover {
+      :host(:not([multiple]):not([size]).open) ::content *:hover {
         background-color: #3875d7;
         color: white;
       }
@@ -87,20 +87,20 @@ UI polish
         vertical-align: top;
         overflow-y: auto;
       }
-      content /content/ * {
+      ::content * {
         padding: 0 24px 1px 3px;
         padding-right: 20px;
         box-sizing: border-box;
         width: 100%;
         margin-left: -1px;
       }
-      :host([multiple]) content /content/ [selected],
-      :host([size]) /content/ [selected] {
+      :host([multiple]) ::content [selected],
+      :host([size]) ::content [selected] {
         background-color: rgb(212,212,212);
         color: black;
       }
-      :host([multiple]:focus) content /content/ [selected],
-      :host([size]:focus) content /content/ [selected] {
+      :host([multiple]:focus) ::content [selected],
+      :host([size]:focus) ::content [selected] {
         background-color: #3875d7;
         color: white;
       }
@@ -121,12 +121,12 @@ UI polish
       :host(:not([multiple]):not([size]):not(.open)) .invalid {
         color: transparent;
       }
-      :host(:not([multiple]):not([size]).open) content /content/ *:before {
+      :host(:not([multiple]):not([size]).open) ::content *:before {
         content: '\2713';
         color: transparent;
         margin-right: 5px;
       }
-      :host(:not([multiple]):not([size]).open) content /content/ [selected]:before {
+      :host(:not([multiple]):not([size]).open) ::content [selected]:before {
         color: currentcolor;
       }
     </style>
