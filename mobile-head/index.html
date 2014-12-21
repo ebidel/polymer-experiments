@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head is="mobile-head">
+  <!-- Import <mobile-head> boilerplate saver. -->
+  <link rel="import" href="mobile-head.html">
+  <link href='http://fonts.googleapis.com/css?family=Source+Code+Pro|Roboto' rel='stylesheet' type='text/css'>
+  <style>
+    body {
+      padding: 3em 10%;
+      font-family: "Roboto";
+    }
+    h1, h2, h3, h4 {
+      font-weight: 300;
+      margin: 0;
+    }
+    h2 { margin-bottom: 10px; }
+    h4 {
+      text-transform: uppercase;
+      font-weight: 400;
+    }
+    header {
+      margin-bottom: 2em;
+    }
+    pre {
+      font-family: "Source Code Pro", courier;
+      font-size: 14px;
+      line-height: 1.5;
+      background: #212121;
+      color: #fff;
+      padding: 15px;
+      border-radius: 4px;
+    }
+  </style>
+  <script src="app.js" async></script>
+</head>
+<body>  
+
+<header>
+  <h2>Extending <code>&lt;head></code> with a custom element for mobile best practices</h2>
+  <h4 style="color:red">Experiment</h4>
+</header>
+
+<p>The <code>&lt;head is="mobile-head"></code> custom element extends <code>&lt;head></code> by providing the boilerplate markup commonly included in <code>&lt;head></code> (meta tags, mobile viewport, title, app manifest.json, touch icons) as well as default/reset stylesheet for the page.</p>
+
+<p>Instead of contstantly remembering all this stuff, simply declare the super-charged <code>&lt;head></code>:</p>
+<pre>
+&lt;head is="mobile-head">
+  &lt;link rel="import" href="mobile-head.html">  
+&lt;/head>
+</pre>
+
+<p>That's it. <a href="http://www.html5rocks.com/en/tutorials/webcomponents/imports/">HTML Imports</a> does the rest.</p>
+
+<h3>Overriding defaults</h3>
+
+<p>We're extending <code>&lt;head></code> using a <a href="http://www.html5rocks.com/en/tutorials/webcomponents/customelements/#typeextension">type extension</a> custom element. This means you can include anything else you'd normally put in <code>&lt;head></code>, including overrides for mobile-head defaults:</p>
+
+<pre>
+&lt;head is="mobile-head">
+  &lt;link rel="import" href="mobile-head.html"> 
+  &lt;title>Custom title&lt;/title> &lt;!-- override default title -->
+  &lt;style>
+    /* page styles */
+  &lt;/style>
+  &lt;script src="app.js" async>&lt;/script> &lt;!-- everyone loves a good script -->
+&lt;/head>
+</pre>
+  
+<p><b>Notes</b>:</p>
+<ul>
+  <li>This only works with native Custom Elements / HTML Imports. Sorry <a href="http://webcomponents.org/polyfills/">webcomponents.js polyfill</a>.</li>
+  <li>However, browsers witout native native Custom Elements / HTML Imports still pickup children of <code>&lt;head is="mobile-head"></code>. You just won't have a supercharged head with all the mobile defaults.</li>
+  <li>TODO: More testing is needed to show dynamically added meta tags play nicely with the HTML parser and SEO. Limited testing shows the title and theme color are picked up correctly.</li>
+  <li>TODO: overrides should be passed in as light dom rather than using data binding.</li>
+  <li>TODO: investigate if <code>&lt;link rel="import" async></code> should be used. the <code>async</code> attribute on Imports does not block rendering.
+</ul>
+
+<p><em class="font-size:smaller">Inspired by the conversation <a href="https://github.com/Polymer/polymer/issues/1022">github.com/Polymer/polymer/issues/1022</a></em>.</p>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-43475701-1', 'ebidel.github.io');
+  ga('send', 'pageview');
+</script>
+</body>
+</html>
