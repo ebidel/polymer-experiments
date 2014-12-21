@@ -1,0 +1,28 @@
+{
+  "name": "x-head",
+  "version": "0.0.0",
+  "homepage": "https://github.com/ebidel/polymer-experiments",
+  "authors": [
+    "Eric Bidelman <ebidel@gmail.com>"
+  ],
+  "description": "Custom element to extend <head> with basic page defaults",
+  "main": "x-head.html",
+  "keywords": [
+    "custom",
+    "elements",
+    "polymer",
+    "mobile"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "polymer": "Polymer/polymer#~0.5.2"
+  }
+}

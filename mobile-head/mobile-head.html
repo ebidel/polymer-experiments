@@ -1,0 +1,74 @@
+<link rel="import" href="bower_components/polymer/polymer.html">
+
+<!-- TODO(ebidel): pass in override tags via light dom instead of using data binding. -->
+
+<!-- Default page styles. This could also be within mobile-head's definition, but
+     HTML Imports adds <style> to the main page for us. -->
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-family: Helvetica, sans-serif;
+    line-height: 1.4;
+    font-weight: 300;
+  }
+  * {
+    box-sizing: border-box;
+  }
+</style>
+
+<polymer-element name="mobile-head" extends="head"
+                 attributes="appTitle description manifest touchicon appname
+                             iosstatusbar iostouchicon themecolor tileimage" hidden>
+<template>   
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="description" content="{{description}}">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{appTitle}}</title>
+
+<!-- Add to homescreen -->
+<link rel="manifest" href="{{manifest}}">
+
+<!-- Fallback to homescreen for Chrome <39 on Android -->
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="{{appname}}">
+<link rel="icon" sizes="192x192" href="{{touchicon}}">
+
+<!-- Add to homescreen for Safari on iOS -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="{{iosstatusbar}}">
+
+<meta name="apple-mobile-web-app-title" content="{{appname}}">
+<link rel="apple-touch-icon" href="{{iostouchicon}}">
+
+<!-- Tile icon for Win8 (144x144 + tile color) -->
+<meta name="msapplication-TileImage" content="{{tileimage}}">
+<meta name="msapplication-TileColor" content="{{themecolor}}">
+
+<meta name="theme-color" content="{{themecolor}}">
+
+</template>
+<script>
+  Polymer({
+    appTitle : "mobile-head title",
+    description : "A front-end template that helps you build fast, modern mobile web apps.",
+    manifest : "manifest.json",
+    touchicon : "images/touch/touch-icon-192x192.png",
+    appname : "mobile-head demo",
+    iosstatusbar : "black",
+    iostouchicon : "images/touch/apple-touch-icon.png",
+    themecolor : "#3372DF",
+    tileimage : "images/touch/ms-touch-icon-144x144-precomposed.png",
+    ready: function() {
+      // Need to add all the elements to the light dom so the parser picks them up.
+      var els = this.shadowRoot.querySelectorAll('*');
+      [].forEach.call(els, function(el) {
+        this.appendChild(el);
+      }.bind(this));
+    }
+  })
+</script>
+</polymer-element>
