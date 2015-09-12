@@ -1,0 +1,16 @@
+{
+  "name": "stockticker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "stockticker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "babel": "^5.8.21",
+    "crisper": "^1.0.7",
+    "vulcanize": "^1.10.3"
+  }
+}

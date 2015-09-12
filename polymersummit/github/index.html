@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+  }
+  main {
+    display: flex;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+  }
+  stock-ticker, stock-ticker-raw {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+  }
+</style>
+</head>
+<body unresolved>
+
+<main>
+  <output></output>
+</main>
+
+<script>
+'use strict';
+
+// ES5 "class" for Polymer Github issues.
+function GitHubIssues(config) {
+  this.org = config.org;
+  this.repo = config.repo;
+};
+
+GitHubIssues.prototype.list = function(opt_sort) {
+  var sort = opt_sort || 'update';
+  var url = 'https://api.github.com/repos/' + this.org +
+            '/' + this.repo + '/issues?sort=' + sort;
+
+  return fetch(url).then(function(response) {
+    return response.json();
+  }).then(function(issues) {
+    console.info('Issues from ' + this.org + '/' + this.repo);
+    issues.forEach(function(issue) {
+      console.log(issue.url, issue.title);
+    });
+    return issues;
+  }.bind(this));
+}
+
+var gh = new GitHubIssues({org: 'Polymer', repo: 'polymer'});
+gh.list();
+
+// // ES6 class for Polymer Github issues.
+// class GithubIssuesES6 {
+//   constructor({org, repo}) {
+//     this.org = org;
+//     this.repo = repo;
+//   }
+
+//   list(sort='update') {
+//     let url = `https://api.github.com/repos/${this.org}/${this.repo}/issues?sort=${this.sort}`;
+//     return fetch(url).then(response => response.json()).then(issues => {
+//       console.info(`Issues from ${this.org}/${this.repo}`);
+//       issues.forEach(issue => console.log(issue.url, issue.title));
+
+//       return issues;
+//     });
+//   }
+// }
+
+// class PolymerIssues extends GithubIssuesES6 {
+//   constructor(repo='polymer') {
+//     super({org: 'Polymer', repo});
+//   }
+// }
+
+// var gh = new PolymerIssues('docs');
+// gh.list();
+
+</script>
+</body>
+</html>

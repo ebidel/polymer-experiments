@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>FOUC demo</title>
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
+<script src="bower_components/webcomponentsjs/webcomponents-lite.min.js" async></script>
+<link rel="import" href="elements.v.html" async>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="fullbleed">
+
+<paper-drawer-panel force-narrow>
+  <paper-header-panel drawer>
+    <paper-toolbar>
+      <div>FOUC demo</div>
+    </paper-toolbar>
+    <div>
+      <paper-menu>
+        <paper-item>Item 1</paper-item>
+        <paper-item>Item 2</paper-item>
+        <paper-item>Item 3</paper-item>
+        <paper-item>Item 4</paper-item>
+        <paper-item>Item 5</paper-item>
+      </paper-menu>
+    </div>
+  </paper-header-panel>
+  <paper-header-panel main mode="cover">
+    <paper-toolbar class="tall" id="maintoolbar">
+      <paper-icon-button icon="menu" paper-drawer-toggle></paper-icon-button>
+      <!-- <div>FOUC demo</div> -->
+    </paper-toolbar>
+    <div class="layout vertical center scroll-content">
+      <paper-card></paper-card>
+      <paper-card></paper-card>
+      <paper-card></paper-card>
+      <paper-card></paper-card>
+    </div>
+  </paper-header-panel>
+</paper-drawer-panel>
+
+</body>
+</html>
