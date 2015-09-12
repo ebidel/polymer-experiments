@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>FOUC demo</title>
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
+<script src="bower_components/webcomponentsjs/webcomponents-lite.min.js" async></script>
+<link rel="import" href="elements.v.html" async>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* Critical CSS is inline and styles the "app shell", giving it layout
+   and other styling to mimic the final look of the custom elements. The styling
+   for those elements is defined in their element definitions in and loaded
+   in elements.html. When the elements load + upgrade, their CSS will start
+   applying and the :unresolved pseudo selector will no longer apply. */
+html, body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #eee;
+  margin: 0;
+}
+paper-toolbar, paper-card, paper-drawer-panel {
+  display: block;
+}
+paper-toolbar:unresolved.tall {
+  height: 192px;
+}
+paper-toolbar:unresolved {
+  color: #fff;
+  background: #42A5F5 !important;
+}
+paper-header-panel[drawer]:unresolved {
+  display: none;
+}
+paper-card:unresolved {
+  background: #fff;
+  border-radius: 2px;
+}
+:unresolved .scroll-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -132px !important;
+}
+</style>
+</head>
+<body class="fullbleed">
+
+<paper-drawer-panel force-narrow>
+  <paper-header-panel drawer>
+    <paper-toolbar>
+      <div>FOUC demo</div>
+    </paper-toolbar>
+    <div>
+      <paper-menu>
+        <paper-item>Item 1</paper-item>
+        <paper-item>Item 2</paper-item>
+        <paper-item>Item 3</paper-item>
+        <paper-item>Item 4</paper-item>
+        <paper-item>Item 5</paper-item>
+      </paper-menu>
+    </div>
+  </paper-header-panel>
+  <paper-header-panel main mode="cover">
+    <paper-toolbar class="tall" id="maintoolbar">
+      <paper-icon-button icon="menu" paper-drawer-toggle></paper-icon-button>
+      <!-- <div>FOUC demo</div> -->
+    </paper-toolbar>
+    <div class="layout vertical center scroll-content">
+      <paper-card></paper-card>
+      <paper-card></paper-card>
+      <paper-card></paper-card>
+      <paper-card></paper-card>
+    </div>
+  </paper-header-panel>
+</paper-drawer-panel>
+
+<!-- <script>
+var l = document.createElement('link');
+l.rel = 'stylesheet';
+l.href = 'styles.css'
+document.head.appendChild(l);
+</script> -->
+</body>
+</html>

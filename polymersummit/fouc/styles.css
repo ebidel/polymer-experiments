@@ -1,0 +1,25 @@
+html, body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #eee;
+  margin: 0;
+}
+paper-toolbar {
+  color: #fff;
+  background: #42A5F5 !important;
+}
+paper-card {
+  width: 600px;
+  height: 400px;
+  max-width: 100%;
+  margin-bottom: 24px;
+}
+.scroll-content {
+  margin: 60px;
+}
+paper-drawer-panel[selected="drawer"] paper-icon-button[icon="menu"] {
+  z-index: auto;
+}
+paper-icon-button[icon="menu"] {
+  position: relative;
+  z-index: 1;
+}
