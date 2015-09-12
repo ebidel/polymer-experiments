@@ -6267,7 +6267,7 @@ Polymer({
         // Takes camelcase class name "StockTicker" -> "stock-ticker".
         var is = this.constructor.name.replace(/\W+/g, '-').replace(/([a-z\d])([A-Z])/g, '$1-$2').toLowerCase();
 
-        this.is = name;
+        this.is = is;
         this.properties = {
           symbols: {
             type: Array,
