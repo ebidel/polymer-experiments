@@ -54,10 +54,10 @@ window.Polymer = {
     }
     var factory = desugar(prototype);
     prototype = factory.prototype;
-    var options = {
-      prototype: prototype,
-      'extends': prototype['extends']
-    };
+    var options = { prototype: prototype };
+    if (prototype['extends']) {
+      options['extends'] = prototype['extends'];
+    }
     Polymer.telemetry._registrate(prototype);
     document.registerElement(prototype.is, options);
     return factory;
@@ -567,7 +567,7 @@ Polymer.Base._addFeature({
     }
   }
 });
-Polymer.version = '1.1.2';
+Polymer.version = '1.1.4';
 Polymer.Base._addFeature({
   _registerFeatures: function _registerFeatures() {
     this._prepIs();
@@ -2715,9 +2715,9 @@ Polymer.Base._addFeature({
           if (gd && gd[name]) {
             gd[name] = (gd[name] || 1) - 1;
             gd._count = (gd._count || 1) - 1;
-          }
-          if (gd._count === 0) {
-            node.removeEventListener(dep, this.handleNative);
+            if (gd._count === 0) {
+              node.removeEventListener(dep, this.handleNative);
+            }
           }
         }
       }
@@ -3805,6 +3805,7 @@ Polymer.Base._addFeature({
     for (var i = 0, l = h$.length, h; i < l && (h = h$[i]); i++) {
       h[0].call(this, h[1], h[2]);
     }
+    this._handlers = [];
   }
 });
 (function () {
@@ -3928,7 +3929,7 @@ Polymer.Base._addFeature({
       if (from) {
         this._boundPaths[to] = from;
       } else {
-        this.unbindPath(to);
+        this.unlinkPaths(to);
       }
     },
     unlinkPaths: function unlinkPaths(path) {
@@ -3937,23 +3938,13 @@ Polymer.Base._addFeature({
       }
     },
     _notifyBoundPaths: function _notifyBoundPaths(path, value) {
-      var from, to;
       for (var a in this._boundPaths) {
         var b = this._boundPaths[a];
         if (path.indexOf(a + '.') == 0) {
-          from = a;
-          to = b;
-          break;
+          this.notifyPath(this._fixPath(b, a, path), value);
+        } else if (path.indexOf(b + '.') == 0) {
+          this.notifyPath(this._fixPath(a, b, path), value);
         }
-        if (path.indexOf(b + '.') == 0) {
-          from = b;
-          to = a;
-          break;
-        }
-      }
-      if (from && to) {
-        var p = this._fixPath(to, from, path);
-        this.notifyPath(p, value);
       }
     },
     _fixPath: function _fixPath(property, root, path) {
@@ -4181,7 +4172,7 @@ Polymer.CssParse = (function () {
     OPEN_BRACE: '{',
     CLOSE_BRACE: '}',
     _rx: {
-      comments: /\/\*[^*]*\*+([^/*][^*]*\*+)*\//gim,
+      comments: /\/\*[^*]*\*+([^\/*][^*]*\*+)*\//gim,
       port: /@import[^;]*;/gim,
       customProp: /(?:^|[\s;])--[^;{]*?:[^{};]*?(?:[;\n]|$)/gim,
       mixinProp: /(?:^|[\s;])--[^;{]*?:[^{;]*?{[^}]*?}(?:[;\n]|$)?/gim,
