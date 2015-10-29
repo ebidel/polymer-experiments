@@ -25,23 +25,43 @@ paper-toolbar, paper-card, paper-drawer-panel {
 paper-toolbar:unresolved.tall {
   height: 192px;
 }
+/*paper-toolbar[unresolved].tall {
+  height: 192px;
+}*/
 paper-toolbar:unresolved {
   color: #fff;
   background: #42A5F5 !important;
 }
+/*paper-toolbar[unresolved] {
+  color: #fff;
+  background: #42A5F5 !important;
+}*/
 paper-header-panel[drawer]:unresolved {
   display: none;
 }
+/*paper-header-panel[drawer][unresolved] {
+  display: none;
+}*/
 paper-card:unresolved {
   background: #fff;
   border-radius: 2px;
 }
+/*paper-card[unresolved] {
+  background: #fff;
+  border-radius: 2px;
+}*/
 :unresolved .scroll-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: -132px !important;
 }
+/*[unresolved] .scroll-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -132px !important;
+}*/
 </style>
 <style is="custom-style">
 paper-drawer-panel[selected="main"] {
@@ -83,13 +103,18 @@ paper-drawer-panel[selected="main"] {
 </paper-drawer-panel>
 
 <script>
-// Need to
+// Need to update custom prop styling when drawer selector changes.
 var drawer = document.querySelector('paper-drawer-panel');
 drawer.addEventListener('iron-select', function(e) {
   drawer.async(function() {
     Polymer.updateStyles();
   }, 0);
 });
+
+// var unresolvedEls = document.querySelectorAll('[unresolved]');
+// [].forEach.call(unresolvedEls, function(el, i) {
+//   el.removeAttribute('unresolved');
+// });
 
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
