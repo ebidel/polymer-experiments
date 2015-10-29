@@ -8,11 +8,12 @@
 <link rel="import" href="elements.v.html" async>
 <link rel="stylesheet" href="styles.css">
 <style>
-/* Critical CSS is inline and styles the "app shell", giving it layout
-   and other styling to mimic the final look of the custom elements. The styling
-   for those elements is defined in their element definitions in and loaded
-   in elements.html. When the elements load + upgrade, their CSS will start
-   applying and the :unresolved pseudo selector will no longer apply. */
+/* Critical CSS is inlined which styles the "app shell", giving it layout
+   and other styling to mimic the final look of the custom elements' CSS.
+   The styling for those elements is defined in their element definitions in
+   and loaded in elements.html when the element are registered. When the elements
+   load + upgrade, their CSS will start applying and the :unresolved pseudo
+   selector will no longer apply. */
 html, body {
   font-family: 'Roboto', sans-serif;
   background-color: #eee;
@@ -42,6 +43,13 @@ paper-card:unresolved {
   margin-top: -132px !important;
 }
 </style>
+<style is="custom-style">
+paper-drawer-panel[selected="main"] {
+  --paper-drawer-panel-scrim: {
+    opacity: 0 !important;
+  };
+}
+</style>
 </head>
 <body class="fullbleed">
 
@@ -66,20 +74,23 @@ paper-card:unresolved {
       <!-- <div>FOUC demo</div> -->
     </paper-toolbar>
     <div class="layout vertical center scroll-content">
-      <paper-card></paper-card>
-      <paper-card></paper-card>
-      <paper-card></paper-card>
-      <paper-card></paper-card>
+      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
+      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
+      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
+      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
     </div>
   </paper-header-panel>
 </paper-drawer-panel>
 
-<!-- <script>
-var l = document.createElement('link');
-l.rel = 'stylesheet';
-l.href = 'styles.css'
-document.head.appendChild(l);
-</script> -->
+<script>
+// Need to
+var drawer = document.querySelector('paper-drawer-panel');
+drawer.addEventListener('iron-select', function(e) {
+  drawer.async(function() {
+    Polymer.updateStyles();
+  }, 0);
+});
+</script>
 
 <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

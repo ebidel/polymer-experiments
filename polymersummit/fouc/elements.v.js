@@ -48,10 +48,10 @@ prototype = {};
 }
 var factory = desugar(prototype);
 prototype = factory.prototype;
-var options = {
-prototype: prototype,
-extends: prototype.extends
-};
+var options = { prototype: prototype };
+if (prototype.extends) {
+options.extends = prototype.extends;
+}
 Polymer.telemetry._registrate(prototype);
 document.registerElement(prototype.is, options);
 return factory;
@@ -256,7 +256,7 @@ document.registerElement('dom-module', DomModule);
 function forceDocumentUpgrade() {
 if (cePolyfill) {
 var script = document._currentScript || document.currentScript;
-var doc = script && script.ownerDocument;
+var doc = script && script.ownerDocument || document;
 if (doc) {
 CustomElements.upgradeAll(doc);
 }
@@ -568,7 +568,7 @@ debouncer.stop();
 }
 }
 });
-Polymer.version = '1.1.2';
+Polymer.version = '1.2.0';
 Polymer.Base._addFeature({
 _registerFeatures: function () {
 this._prepIs();
@@ -849,61 +849,6 @@ return currentValue === previousValue;
 };
 return new ArraySplice();
 }();
-Polymer.EventApi = function () {
-var Settings = Polymer.Settings;
-var EventApi = function (event) {
-this.event = event;
-};
-if (Settings.useShadow) {
-EventApi.prototype = {
-get rootTarget() {
-return this.event.path[0];
-},
-get localTarget() {
-return this.event.target;
-},
-get path() {
-return this.event.path;
-}
-};
-} else {
-EventApi.prototype = {
-get rootTarget() {
-return this.event.target;
-},
-get localTarget() {
-var current = this.event.currentTarget;
-var currentRoot = current && Polymer.dom(current).getOwnerRoot();
-var p$ = this.path;
-for (var i = 0; i < p$.length; i++) {
-if (Polymer.dom(p$[i]).getOwnerRoot() === currentRoot) {
-return p$[i];
-}
-}
-},
-get path() {
-if (!this.event._path) {
-var path = [];
-var o = this.rootTarget;
-while (o) {
-path.push(o);
-o = Polymer.dom(o).parentNode || o.host;
-}
-path.push(window);
-this.event._path = path;
-}
-return this.event._path;
-}
-};
-}
-var factory = function (event) {
-if (!event.__eventApi) {
-event.__eventApi = new EventApi(event);
-}
-return event.__eventApi;
-};
-return { factory: factory };
-}();
 Polymer.domInnerHTML = function () {
 var escapeAttrRegExp = /[&\u00A0"]/g;
 var escapeDataRegExp = /[&\u00A0<>]/g;
@@ -1042,7 +987,7 @@ insertBefore: function (node, ref_node) {
 return this._addNode(node, ref_node);
 },
 _addNode: function (node, ref_node) {
-this._removeNodeFromHost(node, true);
+this._removeNodeFromParent(node);
 var addedInsertionPoint;
 var root = this.getOwnerRoot();
 if (root) {
@@ -1074,6 +1019,7 @@ nativeAppendChild.call(container, node);
 if (addedInsertionPoint) {
 this._updateInsertionPoints(root.host);
 }
+this.notifyObserver();
 return node;
 },
 removeChild: function (node) {
@@ -1088,6 +1034,7 @@ removeFromComposedParent(container, node);
 nativeRemoveChild.call(container, node);
 }
 }
+this.notifyObserver();
 return node;
 },
 replaceChild: function (node, ref_node) {
@@ -1180,6 +1127,13 @@ return Boolean(node._lightChildren !== undefined);
 _parentNeedsDistribution: function (parent) {
 return parent && parent.shadyRoot && hasInsertionPoint(parent.shadyRoot);
 },
+_removeNodeFromParent: function (node) {
+var parent = node._lightParent || node.parentNode;
+if (parent && hasDomApi(parent)) {
+factory(parent).notifyObserver();
+}
+this._removeNodeFromHost(node, true);
+},
 _removeNodeFromHost: function (node, ensureComposedRemoval) {
 var hostNeedsDist;
 var root;
@@ -1191,7 +1145,7 @@ if (root) {
 root.host._elementRemove(node);
 hostNeedsDist = this._removeDistributedChildren(root, node);
 }
-this._removeLogicalInfo(node, node._lightParent);
+this._removeLogicalInfo(node, parent);
 }
 this._removeOwnerShadyRoot(node);
 if (root && hostNeedsDist) {
@@ -1310,24 +1264,29 @@ getDistributedNodes: function () {
 return this.node._distributedNodes || [];
 },
 queryDistributedElements: function (selector) {
-var c$ = this.childNodes;
+var c$ = this.getEffectiveChildNodes();
 var list = [];
-this._distributedFilter(selector, c$, list);
 for (var i = 0, l = c$.length, c; i < l && (c = c$[i]); i++) {
-if (c.localName === CONTENT) {
-this._distributedFilter(selector, factory(c).getDistributedNodes(), list);
+if (c.nodeType === Node.ELEMENT_NODE && matchesSelector.call(c, selector)) {
+list.push(c);
 }
 }
 return list;
 },
-_distributedFilter: function (selector, list, results) {
-results = results || [];
-for (var i = 0, l = list.length, d; i < l && (d = list[i]); i++) {
-if (d.nodeType === Node.ELEMENT_NODE && d.localName !== CONTENT && matchesSelector.call(d, selector)) {
-results.push(d);
+getEffectiveChildNodes: function () {
+var list = [];
+var c$ = this.childNodes;
+for (var i = 0, l = c$.length, c; i < l && (c = c$[i]); i++) {
+if (c.localName === CONTENT) {
+var d$ = factory(c).getDistributedNodes();
+for (var j = 0; j < d$.length; j++) {
+list.push(d$[j]);
+}
+} else {
+list.push(c);
 }
 }
-return results;
+return list;
 },
 _clear: function () {
 while (this.childNodes.length) {
@@ -1371,36 +1330,24 @@ d.appendChild(nc);
 }
 }
 return n;
+},
+observeNodes: function (callback) {
+if (callback) {
+if (!this.observer) {
+this.observer = this.node.localName === CONTENT ? new DomApi.DistributedNodesObserver(this) : new DomApi.EffectiveNodesObserver(this);
 }
-};
-Object.defineProperty(DomApi.prototype, 'classList', {
-get: function () {
-if (!this._classList) {
-this._classList = new DomApi.ClassList(this);
+return this.observer.addListener(callback);
 }
-return this._classList;
 },
-configurable: true
-});
-DomApi.ClassList = function (host) {
-this.domApi = host;
-this.node = host.node;
-};
-DomApi.ClassList.prototype = {
-add: function () {
-this.node.classList.add.apply(this.node.classList, arguments);
-this.domApi._distributeParent();
+unobserveNodes: function (handle) {
+if (this.observer) {
+this.observer.removeListener(handle);
+}
 },
-remove: function () {
-this.node.classList.remove.apply(this.node.classList, arguments);
-this.domApi._distributeParent();
-},
-toggle: function () {
-this.node.classList.toggle.apply(this.node.classList, arguments);
-this.domApi._distributeParent();
-},
-contains: function () {
-return this.node.classList.contains.apply(this.node.classList, arguments);
+notifyObserver: function () {
+if (this.observer) {
+this.observer.notify();
+}
 }
 };
 if (!Settings.useShadow) {
@@ -1582,6 +1529,17 @@ return n$ ? Array.prototype.slice.call(n$) : [];
 };
 DomApi.prototype._distributeParent = function () {
 };
+var nativeForwards = [
+'appendChild',
+'insertBefore',
+'removeChild',
+'replaceChild'
+];
+nativeForwards.forEach(function (forward) {
+DomApi.prototype[forward] = function () {
+return this.node[forward].apply(this.node, arguments);
+};
+});
 Object.defineProperties(DomApi.prototype, {
 childNodes: {
 get: function () {
@@ -1635,13 +1593,17 @@ configurable: true
 });
 }
 var CONTENT = 'content';
-var factory = function (node, patch) {
+function factory(node, patch) {
 node = node || document;
 if (!node.__domApi) {
 node.__domApi = new DomApi(node, patch);
 }
 return node.__domApi;
-};
+}
+;
+function hasDomApi(node) {
+return Boolean(node.__domApi);
+}
 Polymer.dom = function (obj, patch) {
 if (obj instanceof Event) {
 return Polymer.EventApi.factory(obj);
@@ -1649,43 +1611,6 @@ return Polymer.EventApi.factory(obj);
 return factory(obj, patch);
 }
 };
-Polymer.Base.extend(Polymer.dom, {
-_flushGuard: 0,
-_FLUSH_MAX: 100,
-_needsTakeRecords: !Polymer.Settings.useNativeCustomElements,
-_debouncers: [],
-_finishDebouncer: null,
-flush: function () {
-for (var i = 0; i < this._debouncers.length; i++) {
-this._debouncers[i].complete();
-}
-if (this._finishDebouncer) {
-this._finishDebouncer.complete();
-}
-this._flushPolyfills();
-if (this._debouncers.length && this._flushGuard < this._FLUSH_MAX) {
-this._flushGuard++;
-this.flush();
-} else {
-if (this._flushGuard >= this._FLUSH_MAX) {
-console.warn('Polymer.dom.flush aborted. Flush may not be complete.');
-}
-this._flushGuard = 0;
-}
-},
-_flushPolyfills: function () {
-if (this._needsTakeRecords) {
-CustomElements.takeRecords();
-}
-},
-addDebouncer: function (debouncer) {
-this._debouncers.push(debouncer);
-this._finishDebouncer = Polymer.Debounce(this._finishDebouncer, this._finishFlush);
-},
-_finishFlush: function () {
-Polymer.dom._debouncers = [];
-}
-});
 function getLightChildren(node) {
 var children = node._lightChildren;
 return children ? children : node.childNodes;
@@ -1749,10 +1674,399 @@ saveLightChildrenIfNeeded: saveLightChildrenIfNeeded,
 matchesSelector: matchesSelector,
 hasInsertionPoint: hasInsertionPoint,
 ctor: DomApi,
-factory: factory
+factory: factory,
+hasDomApi: hasDomApi
 };
 }();
+Polymer.Base.extend(Polymer.dom, {
+_flushGuard: 0,
+_FLUSH_MAX: 100,
+_needsTakeRecords: !Polymer.Settings.useNativeCustomElements,
+_debouncers: [],
+_staticFlushList: [],
+_finishDebouncer: null,
+flush: function () {
+this._flushGuard = 0;
+this._prepareFlush();
+while (this._debouncers.length && this._flushGuard < this._FLUSH_MAX) {
+for (var i = 0; i < this._debouncers.length; i++) {
+this._debouncers[i].complete();
+}
+if (this._finishDebouncer) {
+this._finishDebouncer.complete();
+}
+this._prepareFlush();
+this._flushGuard++;
+}
+if (this._flushGuard >= this._FLUSH_MAX) {
+console.warn('Polymer.dom.flush aborted. Flush may not be complete.');
+}
+},
+_prepareFlush: function () {
+if (this._needsTakeRecords) {
+CustomElements.takeRecords();
+}
+for (var i = 0; i < this._staticFlushList.length; i++) {
+this._staticFlushList[i]();
+}
+},
+addStaticFlush: function (fn) {
+this._staticFlushList.push(fn);
+},
+removeStaticFlush: function (fn) {
+var i = this._staticFlushList.indexOf(fn);
+if (i >= 0) {
+this._staticFlushList.splice(i, 1);
+}
+},
+addDebouncer: function (debouncer) {
+this._debouncers.push(debouncer);
+this._finishDebouncer = Polymer.Debounce(this._finishDebouncer, this._finishFlush);
+},
+_finishFlush: function () {
+Polymer.dom._debouncers = [];
+}
+});
+Polymer.EventApi = function () {
+'use strict';
+var DomApi = Polymer.DomApi.ctor;
+var Settings = Polymer.Settings;
+DomApi.Event = function (event) {
+this.event = event;
+};
+if (Settings.useShadow) {
+DomApi.Event.prototype = {
+get rootTarget() {
+return this.event.path[0];
+},
+get localTarget() {
+return this.event.target;
+},
+get path() {
+return this.event.path;
+}
+};
+} else {
+DomApi.Event.prototype = {
+get rootTarget() {
+return this.event.target;
+},
+get localTarget() {
+var current = this.event.currentTarget;
+var currentRoot = current && Polymer.dom(current).getOwnerRoot();
+var p$ = this.path;
+for (var i = 0; i < p$.length; i++) {
+if (Polymer.dom(p$[i]).getOwnerRoot() === currentRoot) {
+return p$[i];
+}
+}
+},
+get path() {
+if (!this.event._path) {
+var path = [];
+var o = this.rootTarget;
+while (o) {
+path.push(o);
+o = Polymer.dom(o).parentNode || o.host;
+}
+path.push(window);
+this.event._path = path;
+}
+return this.event._path;
+}
+};
+}
+var factory = function (event) {
+if (!event.__eventApi) {
+event.__eventApi = new DomApi.Event(event);
+}
+return event.__eventApi;
+};
+return { factory: factory };
+}();
 (function () {
+'use strict';
+var DomApi = Polymer.DomApi.ctor;
+Object.defineProperty(DomApi.prototype, 'classList', {
+get: function () {
+if (!this._classList) {
+this._classList = new DomApi.ClassList(this);
+}
+return this._classList;
+},
+configurable: true
+});
+DomApi.ClassList = function (host) {
+this.domApi = host;
+this.node = host.node;
+};
+DomApi.ClassList.prototype = {
+add: function () {
+this.node.classList.add.apply(this.node.classList, arguments);
+this.domApi._distributeParent();
+},
+remove: function () {
+this.node.classList.remove.apply(this.node.classList, arguments);
+this.domApi._distributeParent();
+},
+toggle: function () {
+this.node.classList.toggle.apply(this.node.classList, arguments);
+this.domApi._distributeParent();
+},
+contains: function () {
+return this.node.classList.contains.apply(this.node.classList, arguments);
+}
+};
+}());
+(function () {
+'use strict';
+var DomApi = Polymer.DomApi.ctor;
+var Settings = Polymer.Settings;
+var hasDomApi = Polymer.DomApi.hasDomApi;
+DomApi.EffectiveNodesObserver = function (domApi) {
+this.domApi = domApi;
+this.node = this.domApi.node;
+this._listeners = [];
+};
+DomApi.EffectiveNodesObserver.prototype = {
+addListener: function (callback) {
+if (!this._isSetup) {
+this._setup();
+this._isSetup = true;
+}
+var listener = {
+fn: callback,
+_nodes: []
+};
+this._listeners.push(listener);
+this._scheduleNotify();
+return listener;
+},
+removeListener: function (handle) {
+var i = this._listeners.indexOf(handle);
+if (i >= 0) {
+this._listeners.splice(i, 1);
+handle._nodes = [];
+}
+if (!this._hasListeners()) {
+this._cleanup();
+this._isSetup = false;
+}
+},
+_setup: function () {
+this._observeContentElements(this.domApi.childNodes);
+},
+_cleanup: function () {
+this._unobserveContentElements(this.domApi.childNodes);
+},
+_hasListeners: function () {
+return Boolean(this._listeners.length);
+},
+_scheduleNotify: function () {
+if (this._debouncer) {
+this._debouncer.stop();
+}
+this._debouncer = Polymer.Debounce(this._debouncer, this._notify);
+this._debouncer.context = this;
+Polymer.dom.addDebouncer(this._debouncer);
+},
+notify: function () {
+if (this._hasListeners()) {
+this._scheduleNotify();
+}
+},
+_notify: function (mxns) {
+this._beforeCallListeners();
+this._callListeners();
+},
+_beforeCallListeners: function () {
+this._updateContentElements();
+},
+_updateContentElements: function () {
+this._observeContentElements(this.domApi.childNodes);
+},
+_observeContentElements: function (elements) {
+for (var i = 0, n; i < elements.length && (n = elements[i]); i++) {
+if (this._isContent(n)) {
+n.__observeNodesMap = n.__observeNodesMap || new WeakMap();
+if (!n.__observeNodesMap.has(this)) {
+n.__observeNodesMap.set(this, this._observeContent(n));
+}
+}
+}
+},
+_observeContent: function (content) {
+var h = Polymer.dom(content).observeNodes(this._scheduleNotify.bind(this));
+h._avoidChangeCalculation = true;
+return h;
+},
+_unobserveContentElements: function (elements) {
+for (var i = 0, n, h; i < elements.length && (n = elements[i]); i++) {
+if (this._isContent(n)) {
+h = n.__observeNodesMap.get(this);
+if (h) {
+Polymer.dom(n).unobserveNodes(h);
+n.__observeNodesMap.delete(this);
+}
+}
+}
+},
+_isContent: function (node) {
+return node.localName === 'content';
+},
+_callListeners: function () {
+var o$ = this._listeners;
+var nodes = this._getEffectiveNodes();
+for (var i = 0, o; i < o$.length && (o = o$[i]); i++) {
+var info = this._generateListenerInfo(o, nodes);
+if (info || o._alwaysNotify) {
+this._callListener(o, info);
+}
+}
+},
+_getEffectiveNodes: function () {
+return this.domApi.getEffectiveChildNodes();
+},
+_generateListenerInfo: function (listener, newNodes) {
+if (listener._avoidChangeCalculation) {
+return true;
+}
+var oldNodes = listener._nodes;
+var info = {
+target: this.node,
+addedNodes: [],
+removedNodes: []
+};
+var splices = Polymer.ArraySplice.calculateSplices(newNodes, oldNodes);
+for (var i = 0, s; i < splices.length && (s = splices[i]); i++) {
+for (var j = 0, n; j < s.removed.length && (n = s.removed[j]); j++) {
+info.removedNodes.push(n);
+}
+}
+for (var i = 0, s; i < splices.length && (s = splices[i]); i++) {
+for (var j = s.index; j < s.index + s.addedCount; j++) {
+info.addedNodes.push(newNodes[j]);
+}
+}
+listener._nodes = newNodes;
+if (info.addedNodes.length || info.removedNodes.length) {
+return info;
+}
+},
+_callListener: function (listener, info) {
+return listener.fn.call(this.node, info);
+},
+enableShadowAttributeTracking: function () {
+}
+};
+if (Settings.useShadow) {
+var baseSetup = DomApi.EffectiveNodesObserver.prototype._setup;
+var baseCleanup = DomApi.EffectiveNodesObserver.prototype._cleanup;
+var beforeCallListeners = DomApi.EffectiveNodesObserver.prototype._beforeCallListeners;
+Polymer.Base.extend(DomApi.EffectiveNodesObserver.prototype, {
+_setup: function () {
+if (!this._observer) {
+var self = this;
+this._mutationHandler = function (mxns) {
+if (mxns && mxns.length) {
+self._scheduleNotify();
+}
+};
+this._observer = new MutationObserver(this._mutationHandler);
+this._boundFlush = this._flush.bind(this);
+Polymer.dom.addStaticFlush(this._boundFlush);
+this._observer.observe(this.node, { childList: true });
+}
+baseSetup.call(this);
+},
+_cleanup: function () {
+this._observer.disconnect();
+this._observer = null;
+this._mutationHandler = null;
+Polymer.dom.removeStaticFlush(this._boundFlush);
+baseCleanup.call(this);
+},
+_flush: function () {
+if (this._observer) {
+this._mutationHandler(this._observer.takeRecords());
+}
+},
+enableShadowAttributeTracking: function () {
+if (this._observer) {
+this._makeContentListenersAlwaysNotify();
+this._observer.disconnect();
+this._observer.observe(this.node, {
+childList: true,
+attributes: true,
+subtree: true
+});
+var root = this.domApi.getOwnerRoot();
+var host = root && root.host;
+if (host && Polymer.dom(host).observer) {
+Polymer.dom(host).observer.enableShadowAttributeTracking();
+}
+}
+},
+_makeContentListenersAlwaysNotify: function () {
+for (var i = 0, h; i < this._listeners.length; i++) {
+h = this._listeners[i];
+h._alwaysNotify = h._isContentListener;
+}
+}
+});
+}
+}());
+(function () {
+'use strict';
+var DomApi = Polymer.DomApi.ctor;
+var Settings = Polymer.Settings;
+DomApi.DistributedNodesObserver = function (domApi) {
+DomApi.EffectiveNodesObserver.call(this, domApi);
+};
+DomApi.DistributedNodesObserver.prototype = Object.create(DomApi.EffectiveNodesObserver.prototype);
+Polymer.Base.extend(DomApi.DistributedNodesObserver.prototype, {
+_setup: function () {
+},
+_cleanup: function () {
+},
+_beforeCallListeners: function () {
+},
+_getEffectiveNodes: function () {
+return this.domApi.getDistributedNodes();
+}
+});
+if (Settings.useShadow) {
+Polymer.Base.extend(DomApi.DistributedNodesObserver.prototype, {
+_setup: function () {
+if (!this._observer) {
+var root = this.domApi.getOwnerRoot();
+var host = root && root.host;
+if (host) {
+this._observer = Polymer.dom(host).observeNodes(this._scheduleNotify.bind(this));
+this._observer._isContentListener = true;
+if (this._hasAttrSelect()) {
+Polymer.dom(host).observer.enableShadowAttributeTracking();
+}
+}
+}
+},
+_hasAttrSelect: function () {
+var select = this.node.getAttribute('select');
+return select && select.match(/[[.]+/);
+},
+_cleanup: function () {
+var root = this.domApi.getOwnerRoot();
+var host = root && root.host;
+if (host) {
+Polymer.dom(host).unobserveNodes(this._observer);
+}
+this._observer = null;
+}
+});
+}
+}());
+(function () {
+var hasDomApi = Polymer.DomApi.hasDomApi;
 Polymer.Base._addFeature({
 _prepShady: function () {
 this._useContent = this._useContent || Boolean(this._template);
@@ -1823,6 +2137,7 @@ if (this._useContent) {
 this.shadyRoot._distributionClean = true;
 if (hasInsertionPoint(this.shadyRoot)) {
 this._composeTree();
+notifyContentObservers(this.shadyRoot);
 } else {
 if (!this.shadyRoot._hasDistributed) {
 this.textContent = '';
@@ -1832,6 +2147,9 @@ this.appendChild(this.shadyRoot);
 var children = this._composeNode(this);
 this._updateChildNodes(this, children);
 }
+}
+if (!this.shadyRoot._hasDistributed) {
+notifyInitialDistribution(this);
 }
 this.shadyRoot._hasDistributed = true;
 }
@@ -2050,6 +2368,19 @@ return host.domHost;
 }
 }
 }
+function notifyContentObservers(root) {
+for (var i = 0, c; i < root._insertionPoints.length; i++) {
+c = root._insertionPoints[i];
+if (hasDomApi(c)) {
+Polymer.dom(c).notifyObserver();
+}
+}
+}
+function notifyInitialDistribution(host) {
+if (hasDomApi(host)) {
+Polymer.dom(host).notifyObserver();
+}
+}
 var needsUpgrade = window.CustomElements && !CustomElements.useNative;
 function upgradeLightChildren(children) {
 if (needsUpgrade && children) {
@@ -2115,22 +2446,66 @@ return list;
 _parseNodeAnnotations: function (node, list) {
 return node.nodeType === Node.TEXT_NODE ? this._parseTextNodeAnnotation(node, list) : this._parseElementAnnotations(node, list);
 },
-_testEscape: function (value) {
-var escape = value.slice(0, 2);
-if (escape === '{{' || escape === '[[') {
-return escape;
+_bindingRegex: /([^{[]*)({{|\[\[)([^}\]]*)(?:]]|}})/g,
+_parseBindings: function (text) {
+var re = this._bindingRegex;
+var parts = [];
+var m, lastIndex;
+while ((m = re.exec(text)) !== null) {
+if (m[1]) {
+parts.push({ literal: m[1] });
+}
+var mode = m[2][0];
+var value = m[3].trim();
+var negate = false;
+if (value[0] == '!') {
+negate = true;
+value = value.substring(1).trim();
+}
+var customEvent, notifyEvent, colon;
+if (mode == '{' && (colon = value.indexOf('::')) > 0) {
+notifyEvent = value.substring(colon + 2);
+value = value.substring(0, colon);
+customEvent = true;
+}
+parts.push({
+compoundIndex: parts.length,
+value: value,
+mode: mode,
+negate: negate,
+event: notifyEvent,
+customEvent: customEvent
+});
+lastIndex = re.lastIndex;
+}
+if (lastIndex && lastIndex < text.length) {
+var literal = text.substring(lastIndex);
+if (literal) {
+parts.push({ literal: literal });
+}
+}
+if (parts.length) {
+return parts;
 }
 },
+_literalFromParts: function (parts) {
+var s = '';
+for (var i = 0; i < parts.length; i++) {
+var literal = parts[i].literal;
+s += literal || '';
+}
+return s;
+},
 _parseTextNodeAnnotation: function (node, list) {
-var v = node.textContent;
-var escape = this._testEscape(v);
-if (escape) {
-node.textContent = ' ';
+var parts = this._parseBindings(node.textContent);
+if (parts) {
+node.textContent = this._literalFromParts(parts) || ' ';
 var annote = {
 bindings: [{
 kind: 'text',
-mode: escape[0],
-value: v.slice(2, -2).trim()
+name: 'textContent',
+parts: parts,
+isCompound: parts.length !== 1
 }]
 };
 list.push(annote);
@@ -2192,62 +2567,50 @@ index: index
 });
 },
 _parseNodeAttributeAnnotations: function (node, annotation) {
-for (var i = node.attributes.length - 1, a; a = node.attributes[i]; i--) {
-var n = a.name, v = a.value;
-if (n === 'id' && !this._testEscape(v)) {
-annotation.id = v;
-} else if (n.slice(0, 3) === 'on-') {
+var attrs = Array.prototype.slice.call(node.attributes);
+for (var i = attrs.length - 1, a; a = attrs[i]; i--) {
+var n = a.name;
+var v = a.value;
+var b;
+if (n.slice(0, 3) === 'on-') {
 node.removeAttribute(n);
 annotation.events.push({
 name: n.slice(3),
 value: v
 });
-} else {
-var b = this._parseNodeAttributeAnnotation(node, n, v);
-if (b) {
+} else if (b = this._parseNodeAttributeAnnotation(node, n, v)) {
 annotation.bindings.push(b);
-}
+} else if (n === 'id') {
+annotation.id = v;
 }
 }
 },
-_parseNodeAttributeAnnotation: function (node, n, v) {
-var escape = this._testEscape(v);
-if (escape) {
-var customEvent;
-var name = n;
-var mode = escape[0];
-v = v.slice(2, -2).trim();
-var not = false;
-if (v[0] == '!') {
-v = v.substring(1);
-not = true;
-}
+_parseNodeAttributeAnnotation: function (node, name, value) {
+var parts = this._parseBindings(value);
+if (parts) {
+var origName = name;
 var kind = 'property';
-if (n[n.length - 1] == '$') {
-name = n.slice(0, -1);
+if (name[name.length - 1] == '$') {
+name = name.slice(0, -1);
 kind = 'attribute';
 }
-var notifyEvent, colon;
-if (mode == '{' && (colon = v.indexOf('::')) > 0) {
-notifyEvent = v.substring(colon + 2);
-v = v.substring(0, colon);
-customEvent = true;
+var literal = this._literalFromParts(parts);
+if (literal && kind == 'attribute') {
+node.setAttribute(name, literal);
 }
-if (node.localName == 'input' && n == 'value') {
-node.setAttribute(n, '');
+if (node.localName == 'input' && name == 'value') {
+node.setAttribute(origName, '');
 }
-node.removeAttribute(n);
+node.removeAttribute(origName);
 if (kind === 'property') {
 name = Polymer.CaseMap.dashToCamelCase(name);
 }
 return {
 kind: kind,
-mode: mode,
 name: name,
-value: v,
-negate: not,
-event: notifyEvent,
-customEvent: customEvent
+parts: parts,
+literal: literal,
+isCompound: parts.length !== 1
 };
 }
 },
@@ -2338,9 +2701,14 @@ for (var i = 0; i < notes.length; i++) {
 var note = notes[i];
 for (var j = 0; j < note.bindings.length; j++) {
 var b = note.bindings[j];
-b.signature = this._parseMethod(b.value);
-if (!b.signature) {
-b.model = this._modelForPath(b.value);
+for (var k = 0; k < b.parts.length; k++) {
+var p = b.parts[k];
+if (!p.literal) {
+p.signature = this._parseMethod(p.value);
+if (!p.signature) {
+p.model = this._modelForPath(p.value);
+}
+}
 }
 }
 if (note.templateContent) {
@@ -2351,10 +2719,12 @@ for (var prop in pp) {
 bindings.push({
 index: note.index,
 kind: 'property',
-mode: '{',
 name: '_parent_' + prop,
+parts: [{
+mode: '{',
 model: prop,
 value: prop
+}]
 });
 }
 note.bindings = note.bindings.concat(bindings);
@@ -2365,14 +2735,16 @@ _discoverTemplateParentProps: function (notes) {
 var pp = {};
 notes.forEach(function (n) {
 n.bindings.forEach(function (b) {
-if (b.signature) {
-var args = b.signature.args;
+b.parts.forEach(function (p) {
+if (p.signature) {
+var args = p.signature.args;
 for (var k = 0; k < args.length; k++) {
 pp[args[k].model] = true;
 }
 } else {
-pp[b.model] = true;
+pp[p.model] = true;
 }
+});
 });
 if (n.templateContent) {
 var tpp = n.templateContent._parentProps;
@@ -2392,15 +2764,43 @@ this._marshalAnnotatedNodes();
 this._marshalAnnotatedListeners();
 }
 },
-_configureAnnotationReferences: function () {
-this._configureTemplateContent();
-},
-_configureTemplateContent: function () {
-this._notes.forEach(function (note, i) {
-if (note.templateContent) {
-this._nodes[i]._content = note.templateContent;
+_configureAnnotationReferences: function (config) {
+var notes = this._notes;
+var nodes = this._nodes;
+for (var i = 0; i < notes.length; i++) {
+var note = notes[i];
+var node = nodes[i];
+this._configureTemplateContent(note, node);
+this._configureCompoundBindings(note, node);
 }
-}, this);
+},
+_configureTemplateContent: function (note, node) {
+if (note.templateContent) {
+node._content = note.templateContent;
+}
+},
+_configureCompoundBindings: function (note, node) {
+var bindings = note.bindings;
+for (var i = 0; i < bindings.length; i++) {
+var binding = bindings[i];
+if (binding.isCompound) {
+var storage = node.__compoundStorage__ || (node.__compoundStorage__ = {});
+var parts = binding.parts;
+var literals = new Array(parts.length);
+for (var j = 0; j < parts.length; j++) {
+literals[j] = parts[j].literal;
+}
+var name = binding.name;
+storage[name] = literals;
+if (binding.literal && binding.kind == 'property') {
+if (node._configValue) {
+node._configValue(name, binding.literal);
+} else {
+node[name] = binding.literal;
+}
+}
+}
+}
 },
 _marshalIdNodes: function () {
 this.$ = {};
@@ -2445,7 +2845,15 @@ this.listen(node, name, listeners[key]);
 }
 },
 listen: function (node, eventName, methodName) {
-this._listen(node, eventName, this._createEventHandler(node, eventName, methodName));
+var handler = this._recallEventHandler(this, eventName, node, methodName);
+if (!handler) {
+handler = this._createEventHandler(node, eventName, methodName);
+}
+if (handler._listening) {
+return;
+}
+this._listen(node, eventName, handler);
+handler._listening = true;
 },
 _boundListenerKey: function (eventName, methodName) {
 return eventName + ':' + methodName;
@@ -2484,6 +2892,7 @@ host[methodName](e, e.detail);
 host._warn(host._logf('_createEventHandler', 'listener method `' + methodName + '` not defined'));
 }
 };
+handler._listening = false;
 this._recordEventHandler(host, eventName, node, methodName, handler);
 return handler;
 },
@@ -2491,6 +2900,7 @@ unlisten: function (node, eventName, methodName) {
 var handler = this._recallEventHandler(this, eventName, node, methodName);
 if (handler) {
 this._unlisten(node, eventName, handler);
+handler._listening = false;
 }
 },
 _listen: function (node, eventName, handler) {
@@ -2775,9 +3185,9 @@ gd = gobj[dep];
 if (gd && gd[name]) {
 gd[name] = (gd[name] || 1) - 1;
 gd._count = (gd._count || 1) - 1;
-}
 if (gd._count === 0) {
 node.removeEventListener(dep, this.handleNative);
+}
 }
 }
 }
@@ -3182,7 +3592,9 @@ this._callbacks.splice(0, len);
 this._lastVal += len;
 }
 };
-new (window.MutationObserver || JsMutationObserver)(Polymer.Async._atEndOfMicrotask.bind(Polymer.Async)).observe(Polymer.Async._twiddle, { characterData: true });
+new window.MutationObserver(function () {
+Polymer.Async._atEndOfMicrotask();
+}).observe(Polymer.Async._twiddle, { characterData: true });
 Polymer.Debounce = function () {
 var Async = Polymer.Async;
 var Debouncer = function (context) {
@@ -3264,6 +3676,32 @@ if (toElement) {
 Polymer.dom(toElement).setAttribute(name, '');
 }
 },
+getEffectiveChildNodes: function () {
+return Polymer.dom(this).getEffectiveChildNodes();
+},
+getEffectiveChildren: function () {
+var list = Polymer.dom(this).getEffectiveChildNodes();
+return list.filter(function (n) {
+return n.nodeType === Node.ELEMENT_NODE;
+});
+},
+getEffectiveTextContent: function () {
+var cn = this.getEffectiveChildNodes();
+var tc = [];
+for (var i = 0, c; c = cn[i]; i++) {
+if (c.nodeType !== Node.COMMENT_NODE) {
+tc.push(Polymer.dom(c).textContent);
+}
+}
+return tc.join('');
+},
+queryEffectiveChildren: function (slctr) {
+var e$ = Polymer.dom(this).queryDistributedElements(slctr);
+return e$ && e$[0];
+},
+queryAllEffectiveChildren: function (slctr) {
+return Polymer.dom(this).queryAllDistributedElements(slctr);
+},
 getContentChildNodes: function (slctr) {
 var content = Polymer.dom(this.root).querySelector(slctr || 'content');
 return content ? Polymer.dom(content).getDistributedNodes() : [];
@@ -3301,7 +3739,7 @@ if (index >= 0) {
 return path.splice(index, 1);
 }
 } else {
-var arr = this.get(path);
+var arr = this._get(path);
 index = arr.indexOf(item);
 if (index >= 0) {
 return this.splice(path, index, 1);
@@ -3338,6 +3776,12 @@ elt[n] = props[n];
 }
 }
 return elt;
+},
+isLightDescendant: function (node) {
+return this.contains(node) && Polymer.dom(this).getOwnerRoot() === Polymer.dom(node).getOwnerRoot();
+},
+isLocalDescendant: function (node) {
+return this.root === Polymer.dom(node).getOwnerRoot();
 }
 });
 Polymer.Bind = {
@@ -3477,7 +3921,7 @@ _notedListenerFactory: function (property, path, isStructured, bogusTest) {
 return function (e, target) {
 if (!bogusTest(e, target)) {
 if (e.detail && e.detail.path) {
-this.notifyPath(this._fixPath(path, property, e.detail.path), e.detail.value);
+this._notifyPath(this._fixPath(path, property, e.detail.path), e.detail.value);
 } else {
 var value = target[property];
 if (!isStructured) {
@@ -3503,16 +3947,16 @@ node.addEventListener(info.event, inst._notifyListener.bind(inst, info.changedFn
 };
 Polymer.Base.extend(Polymer.Bind, {
 _shouldAddListener: function (effect) {
-return effect.name && effect.mode === '{' && !effect.negate && effect.kind != 'attribute';
+return effect.name && effect.kind != 'attribute' && effect.kind != 'text' && !effect.isCompound && effect.parts[0].mode === '{' && !effect.parts[0].negate;
 },
 _annotationEffect: function (source, value, effect) {
 if (source != effect.value) {
-value = this.get(effect.value);
+value = this._get(effect.value);
 this.__data__[effect.value] = value;
 }
 var calc = effect.negate ? !value : value;
 if (!effect.customEvent || this._nodes[effect.index][effect.name] !== calc) {
-return this._applyEffectValue(calc, effect);
+return this._applyEffectValue(effect, calc);
 }
 },
 _reflectEffect: function (source) {
@@ -3550,7 +3994,7 @@ var args = Polymer.Bind._marshalArgs(this.__data__, effect, source, value);
 if (args) {
 var fn = this[effect.method];
 if (fn) {
-this.__setProperty(effect.property, fn.apply(this, args));
+this.__setProperty(effect.name, fn.apply(this, args));
 } else {
 this._warn(this._logf('_computeEffect', 'compute method `' + effect.method + '` not defined'));
 }
@@ -3566,7 +4010,7 @@ var computedvalue = fn.apply(computedHost, args);
 if (effect.negate) {
 computedvalue = !computedvalue;
 }
-this._applyEffectValue(computedvalue, effect);
+this._applyEffectValue(effect, computedvalue);
 }
 } else {
 computedHost._warn(computedHost._logf('_annotatedComputationEffect', 'compute method `' + effect.method + '` not defined'));
@@ -3582,7 +4026,7 @@ var v;
 if (arg.literal) {
 v = arg.value;
 } else if (arg.structured) {
-v = Polymer.Base.get(name, model);
+v = Polymer.Base._get(name, model);
 } else {
 v = model[name];
 }
@@ -3645,7 +4089,7 @@ this._addPropertyEffect(arg.model, 'compute', {
 method: sig.method,
 args: sig.args,
 trigger: arg,
-property: name
+name: name
 });
 }, this);
 },
@@ -3683,35 +4127,49 @@ this._addAnnotationEffect(binding, index);
 },
 _addAnnotationEffect: function (note, index) {
 if (Polymer.Bind._shouldAddListener(note)) {
-Polymer.Bind._addAnnotatedListener(this, index, note.name, note.value, note.event);
+Polymer.Bind._addAnnotatedListener(this, index, note.name, note.parts[0].value, note.parts[0].event);
 }
-if (note.signature) {
-this._addAnnotatedComputationEffect(note, index);
-} else {
-note.index = index;
-this._addPropertyEffect(note.model, 'annotation', note);
+for (var i = 0; i < note.parts.length; i++) {
+var part = note.parts[i];
+if (part.signature) {
+this._addAnnotatedComputationEffect(note, part, index);
+} else if (!part.literal) {
+this._addPropertyEffect(part.model, 'annotation', {
+kind: note.kind,
+index: index,
+name: note.name,
+value: part.value,
+isCompound: note.isCompound,
+compoundIndex: part.compoundIndex,
+event: part.event,
+customEvent: part.customEvent,
+negate: part.negate
+});
+}
 }
 },
-_addAnnotatedComputationEffect: function (note, index) {
-var sig = note.signature;
+_addAnnotatedComputationEffect: function (note, part, index) {
+var sig = part.signature;
 if (sig.static) {
-this.__addAnnotatedComputationEffect('__static__', index, note, sig, null);
+this.__addAnnotatedComputationEffect('__static__', index, note, part, null);
 } else {
 sig.args.forEach(function (arg) {
 if (!arg.literal) {
-this.__addAnnotatedComputationEffect(arg.model, index, note, sig, arg);
+this.__addAnnotatedComputationEffect(arg.model, index, note, part, arg);
 }
 }, this);
 }
 },
-__addAnnotatedComputationEffect: function (property, index, note, sig, trigger) {
+__addAnnotatedComputationEffect: function (property, index, note, part, trigger) {
 this._addPropertyEffect(property, 'annotatedComputation', {
 index: index,
+isCompound: note.isCompound,
+compoundIndex: part.compoundIndex,
 kind: note.kind,
-property: note.name,
-negate: note.negate,
-method: sig.method,
-args: sig.args,
+name: note.name,
+negate: part.negate,
+method: part.signature.method,
+args: part.signature.args,
 trigger: trigger
 });
 },
@@ -3780,9 +4238,14 @@ _marshalInstanceEffects: function () {
 Polymer.Bind.prepareInstance(this);
 Polymer.Bind.setupBindListeners(this);
 },
-_applyEffectValue: function (value, info) {
+_applyEffectValue: function (info, value) {
 var node = this._nodes[info.index];
-var property = info.property || info.name || 'textContent';
+var property = info.name;
+if (info.isCompound) {
+var storage = node.__compoundStorage__[property];
+storage[info.compoundIndex] = value;
+value = storage.join('');
+}
 if (info.kind == 'attribute') {
 this.serializeValueToAttribute(value, property, node);
 } else {
@@ -3862,10 +4325,10 @@ for (var p in config) {
 var fx = fx$[p];
 if (fx) {
 for (var i = 0, l = fx.length, x; i < l && (x = fx[i]); i++) {
-if (x.kind === 'annotation') {
+if (x.kind === 'annotation' && !x.isCompound) {
 var node = this._nodes[x.effect.index];
 if (node._configValue) {
-var value = p === x.effect.value ? config[p] : this.get(x.effect.value, config);
+var value = p === x.effect.value ? config[p] : this._get(x.effect.value, config);
 node._configValue(x.effect.name, value);
 }
 }
@@ -3905,17 +4368,23 @@ var h$ = this._handlers;
 for (var i = 0, l = h$.length, h; i < l && (h = h$[i]); i++) {
 h[0].call(this, h[1], h[2]);
 }
+this._handlers = [];
 }
 });
 (function () {
 'use strict';
 Polymer.Base._addFeature({
 notifyPath: function (path, value, fromAbove) {
+var info = {};
+path = this._get(path, this, info);
+this._notifyPath(info.path, value, fromAbove);
+},
+_notifyPath: function (path, value, fromAbove) {
 var old = this._propertySetter(path, value);
 if (old !== value && (old === old || value === value)) {
 this._pathEffector(path, value);
 if (!fromAbove) {
-this._notifyPath(path, value);
+this._notifyPathUp(path, value);
 }
 return true;
 }
@@ -3942,41 +4411,67 @@ var last = parts[parts.length - 1];
 if (parts.length > 1) {
 for (var i = 0; i < parts.length - 1; i++) {
 var part = parts[i];
+if (array && part[0] == '#') {
+prop = Polymer.Collection.get(array).getItem(part);
+} else {
 prop = prop[part];
-if (array && parseInt(part) == part) {
+if (array && parseInt(part, 10) == part) {
 parts[i] = Polymer.Collection.get(array).getKey(prop);
+}
 }
 if (!prop) {
 return;
 }
 array = Array.isArray(prop) ? prop : null;
 }
-if (array && parseInt(last) == last) {
+if (array) {
 var coll = Polymer.Collection.get(array);
+if (last[0] == '#') {
+var key = last;
+var old = coll.getItem(key);
+last = array.indexOf(old);
+coll.setItem(key, value);
+} else if (parseInt(last, 10) == last) {
 var old = prop[last];
 var key = coll.getKey(old);
 parts[i] = key;
 coll.setItem(key, value);
 }
+}
 prop[last] = value;
 if (!root) {
-this.notifyPath(parts.join('.'), value);
+this._notifyPath(parts.join('.'), value);
 }
 } else {
 prop[path] = value;
 }
 },
 get: function (path, root) {
+return this._get(path, root);
+},
+_get: function (path, root, info) {
 var prop = root || this;
 var parts = this._getPathParts(path);
-var last = parts.pop();
-while (parts.length) {
-prop = prop[parts.shift()];
+var array;
+for (var i = 0; i < parts.length; i++) {
 if (!prop) {
 return;
 }
+var part = parts[i];
+if (array && part[0] == '#') {
+prop = Polymer.Collection.get(array).getItem(part);
+} else {
+prop = prop[part];
+if (info && array && parseInt(part, 10) == part) {
+parts[i] = Polymer.Collection.get(array).getKey(prop);
 }
-return prop[last];
+}
+array = Array.isArray(prop) ? prop : null;
+}
+if (info) {
+info.path = parts.join('.');
+}
+return prop;
 },
 _pathEffector: function (path, value) {
 var model = this._modelForPath(path);
@@ -4028,7 +4523,7 @@ this._boundPaths = this._boundPaths || {};
 if (from) {
 this._boundPaths[to] = from;
 } else {
-this.unbindPath(to);
+this.unlinkPaths(to);
 }
 },
 unlinkPaths: function (path) {
@@ -4037,29 +4532,19 @@ delete this._boundPaths[path];
 }
 },
 _notifyBoundPaths: function (path, value) {
-var from, to;
 for (var a in this._boundPaths) {
 var b = this._boundPaths[a];
 if (path.indexOf(a + '.') == 0) {
-from = a;
-to = b;
-break;
+this.notifyPath(this._fixPath(b, a, path), value);
+} else if (path.indexOf(b + '.') == 0) {
+this.notifyPath(this._fixPath(a, b, path), value);
 }
-if (path.indexOf(b + '.') == 0) {
-from = b;
-to = a;
-break;
-}
-}
-if (from && to) {
-var p = this._fixPath(to, from, path);
-this.notifyPath(p, value);
 }
 },
 _fixPath: function (property, root, path) {
 return property + path.slice(root.length);
 },
-_notifyPath: function (path, value) {
+_notifyPathUp: function (path, value) {
 var rootName = this._modelForPath(path);
 var dashCaseName = Polymer.CaseMap.camelToDashCase(rootName);
 var eventName = dashCaseName + this._EVENT_CHANGED;
@@ -4073,47 +4558,62 @@ var dot = path.indexOf('.');
 return dot < 0 ? path : path.slice(0, dot);
 },
 _EVENT_CHANGED: '-changed',
+notifySplices: function (path, splices) {
+var info = {};
+var array = this._get(path, this, info);
+this._notifySplices(array, info.path, splices);
+},
+_notifySplices: function (array, path, splices) {
+var change = {
+keySplices: Polymer.Collection.applySplices(array, splices),
+indexSplices: splices
+};
+if (!array.hasOwnProperty('splices')) {
+Object.defineProperty(array, 'splices', {
+configurable: true,
+writable: true
+});
+}
+array.splices = change;
+this._notifyPath(path + '.splices', change);
+this._notifyPath(path + '.length', array.length);
+change.keySplices = null;
+change.indexSplices = null;
+},
 _notifySplice: function (array, path, index, added, removed) {
-var splices = [{
+this._notifySplices(array, path, [{
 index: index,
 addedCount: added,
 removed: removed,
 object: array,
 type: 'splice'
-}];
-var change = {
-keySplices: Polymer.Collection.applySplices(array, splices),
-indexSplices: splices
-};
-this.set(path + '.splices', change);
-if (added != removed.length) {
-this.notifyPath(path + '.length', array.length);
-}
-change.keySplices = null;
-change.indexSplices = null;
+}]);
 },
 push: function (path) {
-var array = this.get(path);
+var info = {};
+var array = this._get(path, this, info);
 var args = Array.prototype.slice.call(arguments, 1);
 var len = array.length;
 var ret = array.push.apply(array, args);
 if (args.length) {
-this._notifySplice(array, path, len, args.length, []);
+this._notifySplice(array, info.path, len, args.length, []);
 }
 return ret;
 },
 pop: function (path) {
-var array = this.get(path);
+var info = {};
+var array = this._get(path, this, info);
 var hadLength = Boolean(array.length);
 var args = Array.prototype.slice.call(arguments, 1);
 var ret = array.pop.apply(array, args);
 if (hadLength) {
-this._notifySplice(array, path, array.length, 0, [ret]);
+this._notifySplice(array, info.path, array.length, 0, [ret]);
 }
 return ret;
 },
 splice: function (path, start, deleteCount) {
-var array = this.get(path);
+var info = {};
+var array = this._get(path, this, info);
 if (start < 0) {
 start = array.length - Math.floor(-start);
 } else {
@@ -4126,28 +4626,49 @@ var args = Array.prototype.slice.call(arguments, 1);
 var ret = array.splice.apply(array, args);
 var addedCount = Math.max(args.length - 2, 0);
 if (addedCount || ret.length) {
-this._notifySplice(array, path, start, addedCount, ret);
+this._notifySplice(array, info.path, start, addedCount, ret);
 }
 return ret;
 },
 shift: function (path) {
-var array = this.get(path);
+var info = {};
+var array = this._get(path, this, info);
 var hadLength = Boolean(array.length);
 var args = Array.prototype.slice.call(arguments, 1);
 var ret = array.shift.apply(array, args);
 if (hadLength) {
-this._notifySplice(array, path, 0, 0, [ret]);
+this._notifySplice(array, info.path, 0, 0, [ret]);
 }
 return ret;
 },
 unshift: function (path) {
-var array = this.get(path);
+var info = {};
+var array = this._get(path, this, info);
 var args = Array.prototype.slice.call(arguments, 1);
 var ret = array.unshift.apply(array, args);
 if (args.length) {
-this._notifySplice(array, path, 0, args.length, []);
+this._notifySplice(array, info.path, 0, args.length, []);
 }
 return ret;
+},
+prepareModelNotifyPath: function (model) {
+this.mixin(model, {
+fire: Polymer.Base.fire,
+notifyPath: Polymer.Base.notifyPath,
+_get: Polymer.Base._get,
+_EVENT_CHANGED: Polymer.Base._EVENT_CHANGED,
+_notifyPath: Polymer.Base._notifyPath,
+_notifyPathUp: Polymer.Base._notifyPathUp,
+_pathEffector: Polymer.Base._pathEffector,
+_annotationPathEffect: Polymer.Base._annotationPathEffect,
+_complexObserverPathEffect: Polymer.Base._complexObserverPathEffect,
+_annotatedComputationPathEffect: Polymer.Base._annotatedComputationPathEffect,
+_computePathEffect: Polymer.Base._computePathEffect,
+_modelForPath: Polymer.Base._modelForPath,
+_pathMatchesEffect: Polymer.Base._pathMatchesEffect,
+_notifyBoundPaths: Polymer.Base._notifyBoundPaths,
+_getPathParts: Polymer.Base._getPathParts
+});
 }
 });
 }());
@@ -4281,7 +4802,7 @@ MIXIN_RULE: 1000
 OPEN_BRACE: '{',
 CLOSE_BRACE: '}',
 _rx: {
-comments: /\/\*[^*]*\*+([^/*][^*]*\*+)*\//gim,
+comments: /\/\*[^*]*\*+([^\/*][^*]*\*+)*\//gim,
 port: /@import[^;]*;/gim,
 customProp: /(?:^|[\s;])--[^;{]*?:[^{};]*?(?:[;\n]|$)/gim,
 mixinProp: /(?:^|[\s;])--[^;{]*?:[^{;]*?{[^}]*?}(?:[;\n]|$)?/gim,
@@ -5355,6 +5876,7 @@ properties: { __hideTemplateChildren__: { observer: '_showHideChildren' } },
 _instanceProps: Polymer.nob,
 _parentPropPrefix: '_parent_',
 templatize: function (template) {
+this._templatized = template;
 if (!template._content) {
 template._content = template.content;
 }
@@ -5365,12 +5887,12 @@ return;
 }
 var archetype = Object.create(Polymer.Base);
 this._customPrepAnnotations(archetype, template);
+this._prepParentProperties(archetype, template);
 archetype._prepEffects();
 this._customPrepEffects(archetype);
 archetype._prepBehaviors();
 archetype._prepBindings();
-this._prepParentProperties(archetype, template);
-archetype._notifyPath = this._notifyPathImpl;
+archetype._notifyPathUp = this._notifyPathUpImpl;
 archetype._scopeElementClass = this._scopeElementClassImpl;
 archetype.listen = this._listenImpl;
 archetype._showHideChildren = this._showHideChildrenImpl;
@@ -5452,6 +5974,7 @@ delete parentProps[prop];
 proto = archetype._parentPropProto = Object.create(null);
 if (template != this) {
 Polymer.Bind.prepareModel(proto);
+Polymer.Base.prepareModelNotifyPath(proto);
 }
 for (prop in parentProps) {
 var parentProp = this._parentPropPrefix + prop;
@@ -5470,6 +5993,7 @@ Polymer.Bind.prepareInstance(template);
 template._forwardParentProp = this._forwardParentProp.bind(this);
 }
 this._extendTemplate(template, proto);
+template._pathEffector = this._pathEffectorImpl.bind(this);
 }
 },
 _createForwardPropEffector: function (prop) {
@@ -5480,7 +6004,7 @@ this._forwardParentProp(prop, value);
 _createHostPropEffector: function (prop) {
 var prefix = this._parentPropPrefix;
 return function (source, value) {
-this.dataHost[prefix + prop] = value;
+this.dataHost._templatized[prefix + prop] = value;
 };
 },
 _createInstancePropEffector: function (prop) {
@@ -5506,22 +6030,23 @@ _forwardInstancePath: function (inst, path, value) {
 },
 _forwardInstanceProp: function (inst, prop, value) {
 },
-_notifyPathImpl: function (path, value) {
+_notifyPathUpImpl: function (path, value) {
 var dataHost = this.dataHost;
 var dot = path.indexOf('.');
 var root = dot < 0 ? path : path.slice(0, dot);
 dataHost._forwardInstancePath.call(dataHost, this, path, value);
 if (root in dataHost._parentProps) {
-dataHost.notifyPath(dataHost._parentPropPrefix + path, value);
+dataHost._templatized.notifyPath(dataHost._parentPropPrefix + path, value);
 }
 },
-_pathEffector: function (path, value, fromAbove) {
+_pathEffectorImpl: function (path, value, fromAbove) {
 if (this._forwardParentPath) {
 if (path.indexOf(this._parentPropPrefix) === 0) {
-this._forwardParentPath(path.substring(8), value);
+var subPath = path.substring(this._parentPropPrefix.length);
+this._forwardParentPath(subPath, value);
 }
 }
-Polymer.Base._pathEffector.apply(this, arguments);
+Polymer.Base._pathEffector.call(this._templatized, path, value, fromAbove);
 },
 _constructorImpl: function (model, host) {
 this._rootDataHost = host._getRootDataHost();
@@ -5564,8 +6089,9 @@ return host._scopeElementClass(node, value);
 stamp: function (model) {
 model = model || {};
 if (this._parentProps) {
+var templatized = this._templatized;
 for (var prop in this._parentProps) {
-model[prop] = this[this._parentPropPrefix + prop];
+model[prop] = templatized[this._parentPropPrefix + prop];
 }
 }
 return new this.ctor(model, this);
@@ -5622,9 +6148,10 @@ this.omap.set(item, key);
 } else {
 this.pmap[item] = key;
 }
-return key;
+return '#' + key;
 },
 removeKey: function (key) {
+key = this._parseKey(key);
 this._removeFromMap(this.store[key]);
 delete this.store[key];
 },
@@ -5641,16 +6168,29 @@ this.removeKey(key);
 return key;
 },
 getKey: function (item) {
+var key;
 if (item && typeof item == 'object') {
-return this.omap.get(item);
+key = this.omap.get(item);
 } else {
-return this.pmap[item];
+key = this.pmap[item];
+}
+if (key != undefined) {
+return '#' + key;
 }
 },
 getKeys: function () {
-return Object.keys(this.store);
+return Object.keys(this.store).map(function (key) {
+return '#' + key;
+});
+},
+_parseKey: function (key) {
+if (key[0] == '#') {
+return key.slice(1);
+}
+throw new Error('unexpected key ' + key);
 },
 setItem: function (key, item) {
+key = this._parseKey(key);
 var old = this.store[key];
 if (old) {
 this._removeFromMap(old);
@@ -5663,6 +6203,7 @@ this.pmap[item] = key;
 this.store[key] = item;
 },
 getItem: function (key) {
+key = this._parseKey(key);
 return this.store[key];
 },
 getItems: function () {
@@ -6056,7 +6597,7 @@ this.set('items.' + idx, value);
 },
 _forwardInstancePath: function (inst, path, value) {
 if (path.indexOf(this.as + '.') === 0) {
-this.notifyPath('items.' + inst.__key__ + '.' + path.slice(this.as.length + 1), value);
+this._notifyPath('items.' + inst.__key__ + '.' + path.slice(this.as.length + 1), value);
 }
 },
 _forwardParentProp: function (prop, value) {
@@ -6066,7 +6607,7 @@ inst.__setProperty(prop, value, true);
 },
 _forwardParentPath: function (path, value) {
 this._instances.forEach(function (inst) {
-inst.notifyPath(path, value, true);
+inst._notifyPath(path, value, true);
 }, this);
 },
 _forwardItemPath: function (path, value) {
@@ -6078,7 +6619,7 @@ var inst = this._instances[idx];
 if (inst) {
 if (dot >= 0) {
 path = this.as + '.' + path.substring(dot + 1);
-inst.notifyPath(path, value, true);
+inst._notifyPath(path, value, true);
 } else {
 inst.__setProperty(this.as, value, true);
 }
@@ -6130,6 +6671,7 @@ this.unlinkPaths('selected.' + i);
 }
 } else {
 this.unlinkPaths('selected');
+this.unlinkPaths('selectedItem');
 }
 if (this.multi) {
 if (!this.selected || this.selected.length) {
@@ -6173,7 +6715,7 @@ this.deselect(item);
 }
 } else {
 this.push('selected', item);
-skey = this._selectedColl.getKey(item);
+var skey = this._selectedColl.getKey(item);
 this.linkPaths('selected.' + skey, 'items.' + key);
 }
 } else {
@@ -6269,7 +6811,7 @@ this._instance[prop] = value;
 },
 _forwardParentPath: function (path, value) {
 if (this._instance) {
-this._instance.notifyPath(path, value, true);
+this._instance._notifyPath(path, value, true);
 }
 }
 });
@@ -6347,6 +6889,7 @@ this.fire('dom-change');
     // monostate data
     var metaDatas = {};
     var metaArrays = {};
+    var singleton = null;
 
     Polymer.IronMeta = Polymer({
 
@@ -6397,6 +6940,10 @@ this.fire('dom-change');
           notify: true
         }
 
+      },
+
+      hostAttributes: {
+        hidden: true
       },
 
       /**
@@ -6492,6 +7039,13 @@ this.fire('dom-change');
       }
 
     });
+
+    Polymer.IronMeta.getIronMeta = function getIronMeta() {
+       if (singleton === null) {
+         singleton = new Polymer.IronMeta();
+       }
+       return singleton;
+     };
 
     /**
     `iron-meta-query` can be used to access infomation stored in `iron-meta`.
@@ -6609,9 +7163,9 @@ this.fire('dom-change');
    * `iron-iconset-svg` element. Multiple icons should be given distinct id's.
    *
    * Using svg elements to create icons has a few advantages over traditional
-   * bitmap graphics like jpg or png. Icons that use svg are vector based so they
-   * are resolution independent and should look good on any device. They are
-   * stylable via css. Icons can be themed, colorized, and even animated.
+   * bitmap graphics like jpg or png. Icons that use svg are vector based so
+   * they are resolution independent and should look good on any device. They
+   * are stylable via css. Icons can be themed, colorized, and even animated.
    *
    * Example:
    *
@@ -6636,18 +7190,15 @@ this.fire('dom-change');
    *
    * @element iron-iconset-svg
    * @demo demo/index.html
+   * @implements {Polymer.Iconset}
    */
   Polymer({
-
     is: 'iron-iconset-svg',
 
     properties: {
 
       /**
        * The name of the iconset.
-       *
-       * @attribute name
-       * @type string
        */
       name: {
         type: String,
@@ -6656,16 +7207,16 @@ this.fire('dom-change');
 
       /**
        * The size of an individual icon. Note that icons must be square.
-       *
-       * @attribute iconSize
-       * @type number
-       * @default 24
        */
       size: {
         type: Number,
         value: 24
       }
 
+    },
+    
+    attached: function() {
+      this.style.display = 'none';
     },
 
     /**
@@ -6689,7 +7240,7 @@ this.fire('dom-change');
      * @method applyIcon
      * @param {Element} element Element to which the icon is applied.
      * @param {string} iconName Name of the icon to apply.
-     * @return {Element} The svg element which renders the icon.
+     * @return {?Element} The svg element which renders the icon.
      */
     applyIcon: function(element, iconName) {
       // insert svg element into shadow root, if it exists
@@ -6727,6 +7278,9 @@ this.fire('dom-change');
      */
     _nameChanged: function() {
       new Polymer.IronMeta({type: 'iconset', key: this.name, value: this});
+      this.async(function() {
+        this.fire('iron-iconset-added', this, {node: window});
+      });
     },
 
     /**
@@ -6767,13 +7321,15 @@ this.fire('dom-change');
      */
     _prepareSvgClone: function(sourceSvg, size) {
       if (sourceSvg) {
-        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', ['0', '0', size, size].join(' '));
+        var content = sourceSvg.cloneNode(true),
+            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'),
+            viewBox = content.getAttribute('viewBox') || '0 0 ' + size + ' ' + size;
+        svg.setAttribute('viewBox', viewBox);
         svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         // TODO(dfreedm): `pointer-events: none` works around https://crbug.com/370136
         // TODO(sjmiles): inline style may not be ideal, but avoids requiring a shadow-root
         svg.style.cssText = 'pointer-events: none; display: block; width: 100%; height: 100%;';
-        svg.appendChild(sourceSvg.cloneNode(true)).removeAttribute('id');
+        svg.appendChild(content).removeAttribute('id');
         return svg;
       }
       return null;
@@ -7010,7 +7566,7 @@ this.fire('dom-change');
      * `keys` property is pressed.
      *
      * @demo demo/index.html
-     * @polymerBehavior IronA11yKeysBehavior
+     * @polymerBehavior
      */
     Polymer.IronA11yKeysBehavior = {
       properties: {
@@ -7022,6 +7578,15 @@ this.fire('dom-change');
           value: function() {
             return this;
           }
+        },
+
+        /**
+         * If true, this property will cause the implementing element to
+         * automatically stop propagation on any handled KeyboardEvents.
+         */
+        stopKeyboardEventPropagation: {
+          type: Boolean,
+          value: false
         },
 
         _boundKeyHandlers: {
@@ -7167,6 +7732,10 @@ this.fire('dom-change');
       },
 
       _onKeyBindingEvent: function(keyBindings, event) {
+        if (this.stopKeyboardEventPropagation) {
+          event.stopPropagation();
+        }
+
         keyBindings.forEach(function(keyBinding) {
           var keyCombo = keyBinding[0];
           var handlerName = keyBinding[1];
@@ -7180,10 +7749,14 @@ this.fire('dom-change');
       _triggerKeyHandler: function(keyCombo, handlerName, keyboardEvent) {
         var detail = Object.create(keyCombo);
         detail.keyboardEvent = keyboardEvent;
-
-        this[handlerName].call(this, new CustomEvent(keyCombo.event, {
-          detail: detail
-        }));
+        var event = new CustomEvent(keyCombo.event, {
+          detail: detail,
+          cancelable: true
+        });
+        this[handlerName].call(this, event);
+        if (event.defaultPrevented) {
+          keyboardEvent.preventDefault();
+        }
       }
     };
   })();
@@ -7389,33 +7962,7 @@ this.fire('dom-change');
       }
     },
 
-    _eventSourceIsPrimaryInput: function(event) {
-      event = event.detail.sourceEvent || event;
-
-      // Always true for non-mouse events....
-      if (!this._mouseEventRe.test(event.type)) {
-        return true;
-      }
-
-      // http://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/buttons
-      if ('buttons' in event) {
-        return event.buttons === 1;
-      }
-
-      // http://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/which
-      if (typeof event.which === 'number') {
-        return event.which < 2;
-      }
-
-      // http://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
-      return event.button < 1;
-    },
-
     _downHandler: function(event) {
-      if (!this._eventSourceIsPrimaryInput(event)) {
-        return;
-      }
-
       this._setPointerDown(true);
       this._setPressed(true);
       this._setReceivedFocusFromKeyboard(false);
@@ -7493,24 +8040,148 @@ this.fire('dom-change');
     Polymer.IronA11yKeysBehavior,
     Polymer.IronButtonStateImpl
   ];
-/** @polymerBehavior */
+/**
+   * `Polymer.PaperRippleBehavior` dynamically implements a ripple
+   * when the element has focus via pointer or keyboard.
+   *
+   * NOTE: This behavior is intended to be used in conjunction with and after
+   * `Polymer.IronButtonState` and `Polymer.IronControlState`.
+   *
+   * @polymerBehavior Polymer.PaperRippleBehavior
+   */
+  Polymer.PaperRippleBehavior = {
+
+    properties: {
+      /**
+       * If true, the element will not produce a ripple effect when interacted
+       * with via the pointer.
+       */
+      noink: {
+        type: Boolean,
+        observer: '_noinkChanged'
+      },
+
+      /**
+       * @type {Element|undefined}
+       */
+      _rippleContainer: {
+        type: Object,
+      }
+    },
+
+    /**
+     * Ensures a `<paper-ripple>` element is available when the element is
+     * focused.
+     */
+    _buttonStateChanged: function() {
+      if (this.focused) {
+        this.ensureRipple();
+      }
+    },
+
+    /**
+     * In addition to the functionality provided in `IronButtonState`, ensures
+     * a ripple effect is created when the element is in a `pressed` state.
+     */
+    _downHandler: function(event) {
+      Polymer.IronButtonStateImpl._downHandler.call(this, event);
+      if (this.pressed) {
+        this.ensureRipple(event);
+      }
+    },
+
+    /**
+     * Ensures this element contains a ripple effect. For startup efficiency
+     * the ripple effect is dynamically on demand when needed.
+     * @param {!Event=} opt_triggeringEvent (optional) event that triggered the
+     * ripple.
+     */
+    ensureRipple: function(opt_triggeringEvent) {
+      if (!this.hasRipple()) {
+        this._ripple = this._createRipple();
+        this._ripple.noink = this.noink;
+        var rippleContainer = this._rippleContainer || this.root;
+        if (rippleContainer) {
+          Polymer.dom(rippleContainer).appendChild(this._ripple);
+        }
+        var domContainer = rippleContainer === this.shadyRoot ? this :
+          rippleContainer;
+        if (opt_triggeringEvent) {
+          var target = opt_triggeringEvent.target;
+          if (domContainer.contains(/** @type {Node} */(target))) {
+            this._ripple.uiDownAction(opt_triggeringEvent);
+          }
+        }
+      }
+    },
+
+    /**
+     * Returns the `<paper-ripple>` element used by this element to create
+     * ripple effects. The element's ripple is created on demand, when
+     * necessary, and calling this method will force the
+     * ripple to be created.
+     */
+    getRipple: function() {
+      this.ensureRipple();
+      return this._ripple;
+    },
+
+    /**
+     * Returns true if this element currently contains a ripple effect.
+     * @return {boolean}
+     */
+    hasRipple: function() {
+      return Boolean(this._ripple);
+    },
+
+    /**
+     * Create the element's ripple effect via creating a `<paper-ripple>`.
+     * Override this method to customize the ripple element.
+     * @return {!PaperRippleElement} Returns a `<paper-ripple>` element.
+     */
+    _createRipple: function() {
+      return /** @type {!PaperRippleElement} */ (
+          document.createElement('paper-ripple'));
+    },
+
+    _noinkChanged: function(noink) {
+      if (this.hasRipple()) {
+        this._ripple.noink = noink;
+      }
+    }
+
+  };
+/** @polymerBehavior Polymer.PaperButtonBehavior */
   Polymer.PaperButtonBehaviorImpl = {
 
     properties: {
 
-      _elevation: {
-        type: Number
+      /**
+       * The z-depth of this element, from 0-5. Setting to 0 will remove the
+       * shadow, and each increasing number greater than 0 will be "deeper"
+       * than the last.
+       *
+       * @attribute elevation
+       * @type number
+       * @default 1
+       */
+      elevation: {
+        type: Number,
+        reflectToAttribute: true,
+        readOnly: true
       }
 
     },
 
     observers: [
-      '_calculateElevation(focused, disabled, active, pressed, receivedFocusFromKeyboard)'
+      '_calculateElevation(focused, disabled, active, pressed, receivedFocusFromKeyboard)',
+      '_computeKeyboardClass(receivedFocusFromKeyboard)'
     ],
 
     hostAttributes: {
       role: 'button',
-      tabindex: '0'
+      tabindex: '0',
+      animated: true
     },
 
     _calculateElevation: function() {
@@ -7522,14 +8193,46 @@ this.fire('dom-change');
       } else if (this.receivedFocusFromKeyboard) {
         e = 3;
       }
-      this._elevation = e;
+      this._setElevation(e);
+    },
+
+    _computeKeyboardClass: function(receivedFocusFromKeyboard) {
+      this.classList.toggle('keyboard-focus', receivedFocusFromKeyboard);
+    },
+
+    /**
+     * In addition to `IronButtonState` behavior, when space key goes down,
+     * create a ripple down effect.
+     *
+     * @param {!KeyboardEvent} event .
+     */
+    _spaceKeyDownHandler: function(event) {
+      Polymer.IronButtonStateImpl._spaceKeyDownHandler.call(this, event);
+      if (this.hasRipple()) {
+        this._ripple.uiDownAction();
+      }
+    },
+
+    /**
+     * In addition to `IronButtonState` behavior, when space key goes up,
+     * create a ripple up effect.
+     *
+     * @param {!KeyboardEvent} event .
+     */
+    _spaceKeyUpHandler: function(event) {
+      Polymer.IronButtonStateImpl._spaceKeyUpHandler.call(this, event);
+      if (this.hasRipple()) {
+        this._ripple.uiUpAction();
+      }
     }
+
   };
 
   /** @polymerBehavior */
   Polymer.PaperButtonBehavior = [
     Polymer.IronButtonState,
     Polymer.IronControlState,
+    Polymer.PaperRippleBehavior,
     Polymer.PaperButtonBehaviorImpl
   ];
 /**
@@ -7544,11 +8247,20 @@ this.fire('dom-change');
     ],
 
     _focusedChanged: function(receivedFocusFromKeyboard) {
-      if (!this.$.ink) {
-        return;
+      if (receivedFocusFromKeyboard) {
+        this.ensureRipple();
       }
+      if (this.hasRipple()) {
+        this._ripple.holdDown = receivedFocusFromKeyboard;
+      }
+    },
 
-      this.$.ink.holdDown = receivedFocusFromKeyboard;
+    _createRipple: function() {
+      var ripple = Polymer.PaperRippleBehavior._createRipple();
+      ripple.id = 'ink';
+      ripple.setAttribute('center', '');
+      ripple.classList.add('circle');
+      return ripple;
     }
 
   };
@@ -7557,6 +8269,7 @@ this.fire('dom-change');
   Polymer.PaperInkyFocusBehavior = [
     Polymer.IronButtonState,
     Polymer.IronControlState,
+    Polymer.PaperRippleBehavior,
     Polymer.PaperInkyFocusBehaviorImpl
   ];
 /**
@@ -7579,7 +8292,7 @@ this.fire('dom-change');
      * the selected item or undefined if there is no selection.
      */
     get: function() {
-      return this.multi ? this.selection : this.selection[0];
+      return this.multi ? this.selection.slice() : this.selection[0];
     },
 
     /**
@@ -7661,14 +8374,39 @@ this.fire('dom-change');
 /** @polymerBehavior */
   Polymer.IronSelectableBehavior = {
 
+      /**
+       * Fired when iron-selector is activated (selected or deselected).
+       * It is fired before the selected items are changed.
+       * Cancel the event to abort selection.
+       *
+       * @event iron-activate
+       */
+
+      /**
+       * Fired when an item is selected
+       *
+       * @event iron-select
+       */
+
+      /**
+       * Fired when an item is deselected
+       *
+       * @event iron-deselect
+       */
+
+      /**
+       * Fired when the list of selectable items changes (e.g., items are
+       * added or removed). The detail of the event is a list of mutation
+       * records that describe what changed.
+       *
+       * @event iron-items-changed
+       */
+
     properties: {
 
       /**
        * If you want to use the attribute value of an element for `selected` instead of the index,
        * set this to the name of the attribute.
-       *
-       * @attribute attrForSelected
-       * @type {string}
        */
       attrForSelected: {
         type: String,
@@ -7677,9 +8415,6 @@ this.fire('dom-change');
 
       /**
        * Gets or sets the selected element. The default is to use the index of the item.
-       *
-       * @attribute selected
-       * @type {string}
        */
       selected: {
         type: String,
@@ -7689,8 +8424,7 @@ this.fire('dom-change');
       /**
        * Returns the currently selected item.
        *
-       * @attribute selectedItem
-       * @type {Object}
+       * @type {?Object}
        */
       selectedItem: {
         type: Object,
@@ -7702,10 +8436,6 @@ this.fire('dom-change');
        * The event that fires from items when they are selected. Selectable
        * will listen for this event from items and update the selection state.
        * Set to empty string to listen to no events.
-       *
-       * @attribute activateEvent
-       * @type {string}
-       * @default 'tap'
        */
       activateEvent: {
         type: String,
@@ -7714,19 +8444,13 @@ this.fire('dom-change');
       },
 
       /**
-       * This is a CSS selector sting.  If this is set, only items that matches the CSS selector
+       * This is a CSS selector string.  If this is set, only items that match the CSS selector
        * are selectable.
-       *
-       * @attribute selectable
-       * @type {string}
        */
       selectable: String,
 
       /**
        * The class to set on elements when selected.
-       *
-       * @attribute selectedClass
-       * @type {string}
        */
       selectedClass: {
         type: String,
@@ -7735,24 +8459,42 @@ this.fire('dom-change');
 
       /**
        * The attribute to set on elements when selected.
-       *
-       * @attribute selectedAttribute
-       * @type {string}
        */
       selectedAttribute: {
         type: String,
         value: null
-      }
+      },
 
+      /**
+       * The list of items from which a selection can be made.
+       */
+      items: {
+        type: Array,
+        readOnly: true,
+        value: function() {
+          return [];
+        }
+      },
+
+      /**
+       * The set of excluded elements where the key is the `localName`
+       * of the element that will be ignored from the item list.
+       *
+       * @default {template: 1}
+       */
+      _excludedLocalNames: {
+        type: Object,
+        value: function() {
+          return {
+            'template': 1
+          };
+        }
+      }
     },
 
     observers: [
       '_updateSelected(attrForSelected, selected)'
     ],
-
-    excludedLocalNames: {
-      'template': 1
-    },
 
     created: function() {
       this._bindFilterItem = this._filterItem.bind(this);
@@ -7761,28 +8503,18 @@ this.fire('dom-change');
 
     attached: function() {
       this._observer = this._observeItems(this);
-      this._contentObserver = this._observeContent(this);
+      this._updateItems();
+      if (!this._shouldUpdateSelection) {
+        this._updateSelected(this.attrForSelected,this.selected)
+      }
+      this._addListener(this.activateEvent);
     },
 
     detached: function() {
       if (this._observer) {
-        this._observer.disconnect();
-      }
-      if (this._contentObserver) {
-        this._contentObserver.disconnect();
+        Polymer.dom(this).unobserveNodes(this._observer);
       }
       this._removeListener(this.activateEvent);
-    },
-
-    /**
-     * Returns an array of selectable items.
-     *
-     * @property items
-     * @type Array
-     */
-    get items() {
-      var nodes = Polymer.dom(this).queryDistributedElements(this.selectable || '*');
-      return Array.prototype.filter.call(nodes, this._bindFilterItem);
     },
 
     /**
@@ -7827,19 +8559,27 @@ this.fire('dom-change');
       this.selected = this._indexToValue(index);
     },
 
+    get _shouldUpdateSelection() {
+      return this.selected != null;
+    },
+
     _addListener: function(eventName) {
       this.listen(this, eventName, '_activateHandler');
     },
 
     _removeListener: function(eventName) {
-      // There is no unlisten yet...
-      // https://github.com/Polymer/polymer/issues/1639
-      //this.removeEventListener(eventName, this._bindActivateHandler);
+      this.unlisten(this, eventName, '_activateHandler');
     },
 
     _activateEventChanged: function(eventName, old) {
       this._removeListener(old);
       this._addListener(eventName);
+    },
+
+    _updateItems: function() {
+      var nodes = Polymer.dom(this).queryDistributedElements(this.selectable || '*');
+      nodes = Array.prototype.filter.call(nodes, this._bindFilterItem);
+      this._setItems(nodes);
     },
 
     _updateSelected: function() {
@@ -7851,7 +8591,7 @@ this.fire('dom-change');
     },
 
     _filterItem: function(node) {
-      return !this.excludedLocalNames[node.localName];
+      return !this._excludedLocalNames[node.localName];
     },
 
     _valueToItem: function(value) {
@@ -7900,34 +8640,25 @@ this.fire('dom-change');
       this._setSelectedItem(this._selection.get());
     },
 
-    // observe content changes under the given node.
-    _observeContent: function(node) {
-      var content = node.querySelector('content');
-      if (content && content.parentElement === node) {
-        return this._observeItems(node.domHost);
-      }
-    },
-
     // observe items change under the given node.
     _observeItems: function(node) {
-      var observer = new MutationObserver(function() {
-        if (this.selected != null) {
+      return Polymer.dom(node).observeNodes(function(mutations) {
+        // Let other interested parties know about the change so that
+        // we don't have to recreate mutation observers everywher.
+        this.fire('iron-items-changed', mutations, {
+          bubbles: false,
+          cancelable: false
+        });
+
+        this._updateItems();
+
+        if (this._shouldUpdateSelection) {
           this._updateSelected();
         }
-      }.bind(this));
-      observer.observe(node, {
-        childList: true,
-        subtree: true
       });
-      return observer;
     },
 
     _activateHandler: function(e) {
-      // TODO: remove this when https://github.com/Polymer/polymer/issues/1639 is fixed so we
-      // can just remove the old event listener.
-      if (e.type !== this.activateEvent) {
-        return;
-      }
       var t = e.target;
       var items = this.items;
       while (t && t != this) {
@@ -8009,6 +8740,11 @@ this.fire('dom-change');
       this._selection.multi = multi;
     },
 
+    get _shouldUpdateSelection() {
+      return this.selected != null ||
+        (this.selectedValues != null && this.selectedValues.length);
+    },
+
     _updateSelected: function() {
       if (this.multi) {
         this._selectMulti(this.selectedValues);
@@ -8040,9 +8776,9 @@ this.fire('dom-change');
       var i = this.selectedValues.indexOf(value);
       var unselected = i < 0;
       if (unselected) {
-        this.selectedValues.push(value);
+        this.push('selectedValues',value);
       } else {
-        this.selectedValues.splice(i, 1);
+        this.splice('selectedValues',i,1);
       }
       this._selection.setItemSelected(this._valueToItem(value), unselected);
     }
@@ -8094,59 +8830,27 @@ this.fire('dom-change');
 
     listeners: {
       'focus': '_onFocus',
-      'keydown': '_onKeydown'
+      'keydown': '_onKeydown',
+      'iron-items-changed': '_onIronItemsChanged'
     },
 
     keyBindings: {
       'up': '_onUpKey',
       'down': '_onDownKey',
       'esc': '_onEscKey',
-      'enter': '_onEnterKey',
       'shift+tab:keydown': '_onShiftTabDown'
     },
 
-    _updateMultiselectable: function(multi) {
-      if (multi) {
-        this.setAttribute('aria-multiselectable', 'true');
-      } else {
-        this.removeAttribute('aria-multiselectable');
-      }
+    attached: function() {
+      this._resetTabindices();
     },
 
-    _onShiftTabDown: function() {
-      var oldTabIndex;
-
-      Polymer.IronMenuBehaviorImpl._shiftTabPressed = true;
-
-      oldTabIndex = this.getAttribute('tabindex');
-
-      this.setAttribute('tabindex', '-1');
-
-      this.async(function() {
-        this.setAttribute('tabindex', oldTabIndex);
-        Polymer.IronMenuBehaviorImpl._shiftTabPressed = false;
-      // Note: polymer/polymer#1305
-      }, 1);
-    },
-
-    _applySelection: function(item, isSelected) {
-      if (isSelected) {
-        item.setAttribute('aria-selected', 'true');
-      } else {
-        item.removeAttribute('aria-selected');
-      }
-
-      Polymer.IronSelectableBehavior._applySelection.apply(this, arguments);
-    },
-
-    _focusedItemChanged: function(focusedItem, old) {
-      old && old.setAttribute('tabindex', '-1');
-      if (focusedItem) {
-        focusedItem.setAttribute('tabindex', '0');
-        focusedItem.focus();
-      }
-    },
-
+    /**
+     * Selects the given value. If the `multi` property is true, then the selected state of the
+     * `value` will be toggled; otherwise the `value` will be selected.
+     *
+     * @param {string} value the value to select.
+     */
     select: function(value) {
       if (this._defaultFocusAsync) {
         this.cancelAsync(this._defaultFocusAsync);
@@ -8158,6 +8862,152 @@ this.fire('dom-change');
       Polymer.IronMultiSelectableBehaviorImpl.select.apply(this, arguments);
     },
 
+    /**
+     * Resets all tabindex attributes to the appropriate value based on the
+     * current selection state. The appropriate value is `0` (focusable) for
+     * the default selected item, and `-1` (not keyboard focusable) for all
+     * other items.
+     */
+    _resetTabindices: function() {
+      var selectedItem = this.multi ? (this.selectedItems && this.selectedItems[0]) : this.selectedItem;
+
+      this.items.forEach(function(item) {
+        item.setAttribute('tabindex', item === selectedItem ? '0' : '-1');
+      }, this);
+    },
+
+    /**
+     * Sets appropriate ARIA based on whether or not the menu is meant to be
+     * multi-selectable.
+     *
+     * @param {boolean} multi True if the menu should be multi-selectable.
+     */
+    _updateMultiselectable: function(multi) {
+      if (multi) {
+        this.setAttribute('aria-multiselectable', 'true');
+      } else {
+        this.removeAttribute('aria-multiselectable');
+      }
+    },
+
+    /**
+     * Given a KeyboardEvent, this method will focus the appropriate item in the
+     * menu (if there is a relevant item, and it is possible to focus it).
+     *
+     * @param {KeyboardEvent} event A KeyboardEvent.
+     */
+    _focusWithKeyboardEvent: function(event) {
+      for (var i = 0, item; item = this.items[i]; i++) {
+        var attr = this.attrForItemTitle || 'textContent';
+        var title = item[attr] || item.getAttribute(attr);
+        if (title && title.trim().charAt(0).toLowerCase() === String.fromCharCode(event.keyCode).toLowerCase()) {
+          this._setFocusedItem(item);
+          break;
+        }
+      }
+    },
+
+    /**
+     * Focuses the previous item (relative to the currently focused item) in the
+     * menu.
+     */
+    _focusPrevious: function() {
+      var length = this.items.length;
+      var index = (Number(this.indexOf(this.focusedItem)) - 1 + length) % length;
+      this._setFocusedItem(this.items[index]);
+    },
+
+    /**
+     * Focuses the next item (relative to the currently focused item) in the
+     * menu.
+     */
+    _focusNext: function() {
+      var index = (Number(this.indexOf(this.focusedItem)) + 1) % this.items.length;
+      this._setFocusedItem(this.items[index]);
+    },
+
+    /**
+     * Mutates items in the menu based on provided selection details, so that
+     * all items correctly reflect selection state.
+     *
+     * @param {Element} item An item in the menu.
+     * @param {boolean} isSelected True if the item should be shown in a
+     * selected state, otherwise false.
+     */
+    _applySelection: function(item, isSelected) {
+      if (isSelected) {
+        item.setAttribute('aria-selected', 'true');
+      } else {
+        item.removeAttribute('aria-selected');
+      }
+
+      Polymer.IronSelectableBehavior._applySelection.apply(this, arguments);
+    },
+
+    /**
+     * Discretely updates tabindex values among menu items as the focused item
+     * changes.
+     *
+     * @param {Element} focusedItem The element that is currently focused.
+     * @param {?Element} old The last element that was considered focused, if
+     * applicable.
+     */
+    _focusedItemChanged: function(focusedItem, old) {
+      old && old.setAttribute('tabindex', '-1');
+      if (focusedItem) {
+        focusedItem.setAttribute('tabindex', '0');
+        focusedItem.focus();
+      }
+    },
+
+    /**
+     * A handler that responds to mutation changes related to the list of items
+     * in the menu.
+     *
+     * @param {CustomEvent} event An event containing mutation records as its
+     * detail.
+     */
+    _onIronItemsChanged: function(event) {
+      var mutations = event.detail;
+      var mutation;
+      var index;
+
+      for (index = 0; index < mutations.length; ++index) {
+        mutation = mutations[index];
+
+        if (mutation.addedNodes.length) {
+          this._resetTabindices();
+          break;
+        }
+      }
+    },
+
+    /**
+     * Handler that is called when a shift+tab keypress is detected by the menu.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onShiftTabDown: function(event) {
+      var oldTabIndex;
+
+      Polymer.IronMenuBehaviorImpl._shiftTabPressed = true;
+
+      oldTabIndex = this.getAttribute('tabindex');
+
+      this.setAttribute('tabindex', '-1');
+
+      this.async(function() {
+        this.setAttribute('tabindex', oldTabIndex);
+        Polymer.IronMenuBehaviorImpl._shiftTabPressed = false;
+      // NOTE(cdata): polymer/polymer#1305
+      }, 1);
+    },
+
+    /**
+     * Handler that is called when the menu receives focus.
+     *
+     * @param {FocusEvent} event A focus event.
+     */
     _onFocus: function(event) {
       if (Polymer.IronMenuBehaviorImpl._shiftTabPressed) {
         return;
@@ -8179,62 +9029,48 @@ this.fire('dom-change');
       }, 100);
     },
 
-    _onUpKey: function() {
+    /**
+     * Handler that is called when the up key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onUpKey: function(event) {
       // up and down arrows moves the focus
       this._focusPrevious();
     },
 
-    _onDownKey: function() {
+    /**
+     * Handler that is called when the down key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onDownKey: function(event) {
       this._focusNext();
     },
 
-    _onEscKey: function() {
+    /**
+     * Handler that is called when the esc key is pressed.
+     *
+     * @param {CustomEvent} event A key combination event.
+     */
+    _onEscKey: function(event) {
       // esc blurs the control
       this.focusedItem.blur();
     },
 
-    _onEnterKey: function(event) {
-      // enter activates the item unless it is disabled
-      this._activateFocused(event.detail.keyboardEvent);
-    },
-
+    /**
+     * Handler that is called when a keydown event is detected.
+     *
+     * @param {KeyboardEvent} event A keyboard event.
+     */
     _onKeydown: function(event) {
-      if (this.keyboardEventMatchesKeys(event, 'up down esc enter')) {
+      if (this.keyboardEventMatchesKeys(event, 'up down esc')) {
         return;
       }
 
       // all other keys focus the menu item starting with that character
       this._focusWithKeyboardEvent(event);
-    },
-
-    _focusWithKeyboardEvent: function(event) {
-      for (var i = 0, item; item = this.items[i]; i++) {
-        var attr = this.attrForItemTitle || 'textContent';
-        var title = item[attr] || item.getAttribute(attr);
-        if (title && title.trim().charAt(0).toLowerCase() === String.fromCharCode(event.keyCode).toLowerCase()) {
-          this._setFocusedItem(item);
-          break;
-        }
-      }
-    },
-
-    _activateFocused: function(event) {
-      if (!this.focusedItem.hasAttribute('disabled')) {
-        this._activateHandler(event);
-      }
-    },
-
-    _focusPrevious: function() {
-      var length = this.items.length;
-      var index = (Number(this.indexOf(this.focusedItem)) - 1 + length) % length;
-      this._setFocusedItem(this.items[index]);
-    },
-
-    _focusNext: function() {
-      var index = (Number(this.indexOf(this.focusedItem)) + 1) % this.items.length;
-      this._setFocusedItem(this.items[index]);
     }
-
   };
 
   Polymer.IronMenuBehaviorImpl._shiftTabPressed = false;
@@ -8267,23 +9103,66 @@ Polymer({
       query: {
         type: String,
         observer: 'queryChanged'
+      },
+
+      /**
+       * If true, the query attribute is assumed to be a complete media query
+       * string rather than a single media feature.
+       */
+      full: {
+        type: Boolean,
+        value: false
+      },
+      
+      /**
+       * @type {function(MediaQueryList)}
+       */ 
+      _boundMQHandler: {
+        value: function() {
+          return this.queryHandler.bind(this);
+        }
+      },
+      
+      /**
+       * @type {MediaQueryList}
+       */ 
+      _mq: {
+        value: null
       }
-
     },
 
-    created: function() {
-      this._mqHandler = this.queryHandler.bind(this);
+    attached: function() {
+      this.queryChanged();
     },
 
-    queryChanged: function(query) {
+    detached: function() {
+      this._remove();
+    },
+
+    _add: function() {
       if (this._mq) {
-        this._mq.removeListener(this._mqHandler);
+        this._mq.addListener(this._boundMQHandler);
       }
-      if (query[0] !== '(') {
+    },
+
+    _remove: function() {
+      if (this._mq) {
+        this._mq.removeListener(this._boundMQHandler);
+      }
+      this._mq = null;
+    },
+
+    queryChanged: function() {
+      this._remove();
+      var query = this.query;
+      if (!query) {
+        return;
+      }
+      if (!this.full && query[0] !== '(') {
         query = '(' + query + ')';
       }
       this._mq = window.matchMedia(query);
-      this._mq.addListener(this._mqHandler);
+      this._add();
       this.queryHandler(this._mq);
     },
 
@@ -8347,6 +9226,184 @@ Polymer({
     ]
 
   });
+/**
+   * `IronResizableBehavior` is a behavior that can be used in Polymer elements to
+   * coordinate the flow of resize events between "resizers" (elements that control the
+   * size or hidden state of their children) and "resizables" (elements that need to be
+   * notified when they are resized or un-hidden by their parents in order to take
+   * action on their new measurements).
+   * Elements that perform measurement should add the `IronResizableBehavior` behavior to
+   * their element definition and listen for the `iron-resize` event on themselves.
+   * This event will be fired when they become showing after having been hidden,
+   * when they are resized explicitly by another resizable, or when the window has been
+   * resized.
+   * Note, the `iron-resize` event is non-bubbling.
+   *
+   * @polymerBehavior Polymer.IronResizableBehavior
+   * @demo demo/index.html
+   **/
+  Polymer.IronResizableBehavior = {
+    properties: {
+      /**
+       * The closest ancestor element that implements `IronResizableBehavior`.
+       */
+      _parentResizable: {
+        type: Object,
+        observer: '_parentResizableChanged'
+      },
+
+      /**
+       * True if this element is currently notifying its descedant elements of
+       * resize.
+       */
+      _notifyingDescendant: {
+        type: Boolean,
+        value: false
+      }
+    },
+
+    listeners: {
+      'iron-request-resize-notifications': '_onIronRequestResizeNotifications'
+    },
+
+    created: function() {
+      // We don't really need property effects on these, and also we want them
+      // to be created before the `_parentResizable` observer fires:
+      this._interestedResizables = [];
+      this._boundNotifyResize = this.notifyResize.bind(this);
+    },
+
+    attached: function() {
+      this.fire('iron-request-resize-notifications', null, {
+        node: this,
+        bubbles: true,
+        cancelable: true
+      });
+
+      if (!this._parentResizable) {
+        window.addEventListener('resize', this._boundNotifyResize);
+        this.notifyResize();
+      }
+    },
+
+    detached: function() {
+      if (this._parentResizable) {
+        this._parentResizable.stopResizeNotificationsFor(this);
+      } else {
+        window.removeEventListener('resize', this._boundNotifyResize);
+      }
+
+      this._parentResizable = null;
+    },
+
+    /**
+     * Can be called to manually notify a resizable and its descendant
+     * resizables of a resize change.
+     */
+    notifyResize: function() {
+      if (!this.isAttached) {
+        return;
+      }
+
+      this._interestedResizables.forEach(function(resizable) {
+        if (this.resizerShouldNotify(resizable)) {
+          this._notifyDescendant(resizable);
+        }
+      }, this);
+
+      this._fireResize();
+    },
+
+    /**
+     * Used to assign the closest resizable ancestor to this resizable
+     * if the ancestor detects a request for notifications.
+     */
+    assignParentResizable: function(parentResizable) {
+      this._parentResizable = parentResizable;
+    },
+
+    /**
+     * Used to remove a resizable descendant from the list of descendants
+     * that should be notified of a resize change.
+     */
+    stopResizeNotificationsFor: function(target) {
+      var index = this._interestedResizables.indexOf(target);
+
+      if (index > -1) {
+        this._interestedResizables.splice(index, 1);
+        this.unlisten(target, 'iron-resize', '_onDescendantIronResize');
+      }
+    },
+
+    /**
+     * This method can be overridden to filter nested elements that should or
+     * should not be notified by the current element. Return true if an element
+     * should be notified, or false if it should not be notified.
+     *
+     * @param {HTMLElement} element A candidate descendant element that
+     * implements `IronResizableBehavior`.
+     * @return {boolean} True if the `element` should be notified of resize.
+     */
+    resizerShouldNotify: function(element) { return true; },
+
+    _onDescendantIronResize: function(event) {
+      if (this._notifyingDescendant) {
+        event.stopPropagation();
+        return;
+      }
+
+      // NOTE(cdata): In ShadowDOM, event retargetting makes echoing of the
+      // otherwise non-bubbling event "just work." We do it manually here for
+      // the case where Polymer is not using shadow roots for whatever reason:
+      if (!Polymer.Settings.useShadow) {
+        this._fireResize();
+      }
+    },
+
+    _fireResize: function() {
+      this.fire('iron-resize', null, {
+        node: this,
+        bubbles: false
+      });
+    },
+
+    _onIronRequestResizeNotifications: function(event) {
+      var target = event.path ? event.path[0] : event.target;
+
+      if (target === this) {
+        return;
+      }
+
+      if (this._interestedResizables.indexOf(target) === -1) {
+        this._interestedResizables.push(target);
+        this.listen(target, 'iron-resize', '_onDescendantIronResize');
+      }
+
+      target.assignParentResizable(this);
+      this._notifyDescendant(target);
+
+      event.stopPropagation();
+    },
+
+    _parentResizableChanged: function(parentResizable) {
+      if (parentResizable) {
+        window.removeEventListener('resize', this._boundNotifyResize);
+      }
+    },
+
+    _notifyDescendant: function(descendant) {
+      // NOTE(cdata): In IE10, attached is fired on children first, so it's
+      // important not to notify them if the parent is not attached yet (or
+      // else they will get redundantly notified when the parent attaches).
+      if (!this.isAttached) {
+        return;
+      }
+
+      this._notifyingDescendant = true;
+      descendant.notifyResize();
+      this._notifyingDescendant = false;
+    }
+  };
 Polymer({
 
       is: 'iron-icon',
@@ -8380,11 +9437,14 @@ Polymer({
           type: String,
           observer: '_srcChanged'
         },
-        
+
+        /**
+         * @type {!Polymer.IronMeta}
+         */
         _meta: {
           value: Polymer.Base.create('iron-meta', {type: 'iconset'})
         }
-        
+
       },
 
       _DEFAULT_ICONSET: 'icons',
@@ -8408,12 +9468,13 @@ Polymer({
       _updateIcon: function() {
         if (this._usesIconset()) {
           if (this._iconsetName) {
-            this._iconset = this._meta.byKey(this._iconsetName);
+            this._iconset = /** @type {?Polymer.Iconset} */ (
+              this._meta.byKey(this._iconsetName));
             if (this._iconset) {
               this._iconset.applyIcon(this, this._iconName, this.theme);
+              this.unlisten(window, 'iron-iconset-added', '_updateIcon');
             } else {
-              this._warn(this._logf('_updateIcon', 'could not find iconset `'
-                + this._iconsetName + '`, did you import the iconset?'));
+              this.listen(window, 'iron-iconset-added', '_updateIcon');
             }
           }
         } else {
@@ -8814,20 +9875,6 @@ Polymer({
   })();
 (function() {
     var Utility = {
-      cssColorWithAlpha: function(cssColor, alpha) {
-        var parts = cssColor.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-
-        if (typeof alpha == 'undefined') {
-          alpha = 1;
-        }
-
-        if (!parts) {
-          return 'rgba(255, 255, 255, ' + alpha + ')';
-        }
-
-        return 'rgba(' + parts[1] + ', ' + parts[2] + ', ' + parts[3] + ', ' + alpha + ')';
-      },
-
       distance: function(x1, y1, x2, y2) {
         var xDelta = (x1 - x2);
         var yDelta = (y1 - y2);
@@ -8835,13 +9882,8 @@ Polymer({
         return Math.sqrt(xDelta * xDelta + yDelta * yDelta);
       },
 
-      now: (function() {
-        if (window.performance && window.performance.now) {
-          return window.performance.now.bind(window.performance);
-        }
-
-        return Date.now;
-      })()
+      now: window.performance && window.performance.now ?
+          window.performance.now.bind(window.performance) : Date.now
     };
 
     /**
@@ -9209,6 +10251,17 @@ Polymer({
           observer: '_holdDownChanged'
         },
 
+        /**
+         * If true, the ripple will not generate a ripple effect
+         * via pointer interaction.
+         * Calling ripple's imperative api like `simulatedRipple` will
+         * still generate the ripple effect.
+         */
+        noink: {
+          type: Boolean,
+          value: false
+        },
+
         _animating: {
           type: Boolean
         },
@@ -9220,6 +10273,10 @@ Polymer({
           }
         }
       },
+
+      observers: [
+        '_noinkChanged(noink, isAttached)'
+      ],
 
       get target () {
         var ownerRoot = Polymer.dom(this).getOwnerRoot();
@@ -9241,12 +10298,13 @@ Polymer({
       },
 
       attached: function() {
-        this.listen(this.target, 'up', 'upAction');
-        this.listen(this.target, 'down', 'downAction');
+        this.listen(this.target, 'up', 'uiUpAction');
+        this.listen(this.target, 'down', 'uiDownAction');
+      },
 
-        if (!this.target.hasAttribute('noink')) {
-          this.keyEventTarget = this.target;
-        }
+      detached: function() {
+        this.unlisten(this.target, 'up', 'uiUpAction');
+        this.unlisten(this.target, 'down', 'uiDownAction');
       },
 
       get shouldKeepAnimating () {
@@ -9268,7 +10326,22 @@ Polymer({
         }, 1);
       },
 
-      /** @param {Event=} event */
+      /**
+       * Provokes a ripple down effect via a UI event,
+       * respecting the `noink` property.
+       * @param {Event=} event
+       */
+      uiDownAction: function(event) {
+        if (!this.noink) {
+          this.downAction(event);
+        }
+      },
+
+      /**
+       * Provokes a ripple down effect via a UI event,
+       * *not* respecting the `noink` property.
+       * @param {Event=} event
+       */
       downAction: function(event) {
         if (this.holdDown && this.ripples.length > 0) {
           return;
@@ -9283,7 +10356,22 @@ Polymer({
         }
       },
 
-      /** @param {Event=} event */
+      /**
+       * Provokes a ripple up effect via a UI event,
+       * respecting the `noink` property.
+       * @param {Event=} event
+       */
+      uiUpAction: function(event) {
+        if (!this.noink) {
+          this.upAction(event);
+        }
+      },
+
+      /**
+       * Provokes a ripple up effect via a UI event,
+       * *not* respecting the `noink` property.
+       * @param {Event=} event
+       */
       upAction: function(event) {
         if (this.holdDown) {
           return;
@@ -9356,88 +10444,99 @@ Polymer({
       },
 
       _onEnterKeydown: function() {
-        this.downAction();
-        this.async(this.upAction, 1);
+        this.uiDownAction();
+        this.async(this.uiUpAction, 1);
       },
 
       _onSpaceKeydown: function() {
-        this.downAction();
+        this.uiDownAction();
       },
 
       _onSpaceKeyup: function() {
-        this.upAction();
+        this.uiUpAction();
       },
 
-      _holdDownChanged: function(holdDown) {
-        if (holdDown) {
+      // note: holdDown does not respect noink since it can be a focus based
+      // effect.
+      _holdDownChanged: function(newVal, oldVal) {
+        if (oldVal === undefined) {
+          return;
+        }
+        if (newVal) {
           this.downAction();
         } else {
           this.upAction();
+        }
+      },
+
+      _noinkChanged: function(noink, attached) {
+        if (attached) {
+          this.keyEventTarget = noink ? this : this.target;
         }
       }
     });
   })();
 Polymer({
-    is: 'paper-icon-button',
+      is: 'paper-icon-button',
 
-    hostAttributes: {
-      role: 'button',
-      tabindex: '0'
-    },
-
-    behaviors: [
-      Polymer.PaperInkyFocusBehavior
-    ],
-
-    properties: {
-      /**
-       * The URL of an image for the icon. If the src property is specified,
-       * the icon property should not be.
-       */
-      src: {
-        type: String
+      hostAttributes: {
+        role: 'button',
+        tabindex: '0'
       },
 
-      /**
-       * Specifies the icon name or index in the set of icons available in
-       * the icon's icon set. If the icon property is specified,
-       * the src property should not be.
-       */
-      icon: {
-        type: String
+      behaviors: [
+        Polymer.PaperInkyFocusBehavior
+      ],
+
+      properties: {
+        /**
+         * The URL of an image for the icon. If the src property is specified,
+         * the icon property should not be.
+         */
+        src: {
+          type: String
+        },
+
+        /**
+         * Specifies the icon name or index in the set of icons available in
+         * the icon's icon set. If the icon property is specified,
+         * the src property should not be.
+         */
+        icon: {
+          type: String
+        },
+
+        /**
+         * Specifies the alternate text for the button, for accessibility.
+         */
+        alt: {
+          type: String,
+          observer: "_altChanged"
+        }
       },
 
-      /**
-       * Specifies the alternate text for the button, for accessibility.
-       */
-      alt: {
-        type: String,
-        observer: "_altChanged"
+      _altChanged: function(newValue, oldValue) {
+        var label = this.getAttribute('aria-label');
+
+        // Don't stomp over a user-set aria-label.
+        if (!label || oldValue == label) {
+          this.setAttribute('aria-label', newValue);
+        }
       }
-    },
+    });
+Polymer({
+      is: 'paper-item',
 
-    _altChanged: function(newValue, oldValue) {
-      var label = this.getAttribute('aria-label');
+      hostAttributes: {
+        role: 'listitem',
+        tabindex: '0'
+      },
 
-      // Don't stomp over a user-set aria-label.
-      if (!label || oldValue == label) {
-        this.setAttribute('aria-label', newValue);
-      }
-    }
-  });
-(function() {
-
-  Polymer({
-
-    is: 'paper-item',
-
-    hostAttributes: {
-      role: 'listitem'
-    }
-
-  });
-
-})();
+      behaviors: [
+        Polymer.IronControlState,
+        Polymer.IronButtonState
+      ]
+    });
 (function() {
 
   Polymer({
@@ -9455,7 +10554,6 @@ Polymer({
     is: 'paper-material',
 
     properties: {
-
       /**
        * The z-depth of this element, from 0-5. Setting to 0 will remove the
        * shadow, and each increasing number greater than 0 will be "deeper"
@@ -9514,7 +10612,8 @@ Polymer({
        */
       elevation: {
         type: Number,
-        value: 1
+        value: 1,
+        reflectToAttribute: true
       },
 
       /**
@@ -9524,6 +10623,17 @@ Polymer({
       animatedShadow: {
         type: Boolean,
         value: false
+      },
+
+      /**
+       * Read-only property used to pass down the `animatedShadow` value to
+       * the underlying paper-material style (since they have different names).
+       */
+      animated: {
+        type: Boolean,
+        reflectToAttribute: true,
+        readOnly: true,
+        computed: '_computeAnimated(animatedShadow)'
       }
     },
 
@@ -9537,10 +10647,13 @@ Polymer({
       if (image)
         cls += ' over-image';
       return cls;
+    },
+
+    _computeAnimated: function(animatedShadow) {
+      return animatedShadow;
     }
   });
 Polymer({
-
     is: 'paper-button',
 
     behaviors: [
@@ -9548,7 +10661,6 @@ Polymer({
     ],
 
     properties: {
-
       /**
        * If true, the button should be styled with a shadow.
        */
@@ -9562,470 +10674,468 @@ Polymer({
 
     _calculateElevation: function() {
       if (!this.raised) {
-        this._elevation = 0;
+        this.elevation = 0;
       } else {
         Polymer.PaperButtonBehaviorImpl._calculateElevation.apply(this);
       }
-    },
-
-    _computeContentClass: function(receivedFocusFromKeyboard) {
-      var className = 'content ';
-      if (receivedFocusFromKeyboard) {
-        className += ' keyboard-focus';
-      }
-      return className;
     }
   });
 (function() {
+      'use strict';
 
-    'use strict';
+      // this would be the only `paper-drawer-panel` in
+      // the whole app that can be in `dragging` state
+      var sharedPanel = null;
 
-   // this would be the only `paper-drawer-panel` in
-   // the whole app that can be in `dragging` state
-    var sharedPanel = null;
-
-    function classNames(obj) {
-      var classes = [];
-      for (var key in obj) {
-        if (obj.hasOwnProperty(key) && obj[key]) {
-          classes.push(key);
+      function classNames(obj) {
+        var classes = [];
+        for (var key in obj) {
+          if (obj.hasOwnProperty(key) && obj[key]) {
+            classes.push(key);
+          }
         }
+
+        return classes.join(' ');
       }
 
-      return classes.join(' ');
-    }
+      Polymer({
 
-    Polymer({
+        is: 'paper-drawer-panel',
 
-      is: 'paper-drawer-panel',
-
-      /**
-       * Fired when the narrow layout changes.
-       *
-       * @event paper-responsive-change {{narrow: boolean}} detail -
-       *     narrow: true if the panel is in narrow layout.
-       */
-
-      /**
-       * Fired when the a panel is selected.
-       *
-       * Listening for this event is an alternative to observing changes in the `selected` attribute.
-       * This event is fired both when a panel is selected.
-       *
-       * @event iron-select {{item: Object}} detail -
-       *     item: The panel that the event refers to.
-       */
-
-      /**
-       * Fired when a panel is deselected.
-       *
-       * Listening for this event is an alternative to observing changes in the `selected` attribute.
-       * This event is fired both when a panel is deselected.
-       *
-       * @event iron-deselect {{item: Object}} detail -
-       *     item: The panel that the event refers to.
-       */
-      properties: {
+        behaviors: [Polymer.IronResizableBehavior],
 
         /**
-         * The panel to be selected when `paper-drawer-panel` changes to narrow
-         * layout.
+         * Fired when the narrow layout changes.
+         *
+         * @event paper-responsive-change {{narrow: boolean}} detail -
+         *     narrow: true if the panel is in narrow layout.
          */
-        defaultSelected: {
-          type: String,
-          value: 'main'
-        },
 
         /**
-         * If true, swipe from the edge is disable.
+         * Fired when the a panel is selected.
+         *
+         * Listening for this event is an alternative to observing changes in the `selected` attribute.
+         * This event is fired both when a panel is selected.
+         *
+         * @event iron-select {{item: Object}} detail -
+         *     item: The panel that the event refers to.
          */
-        disableEdgeSwipe: {
-          type: Boolean,
-          value: false
-        },
 
         /**
-         * If true, swipe to open/close the drawer is disabled.
+         * Fired when a panel is deselected.
+         *
+         * Listening for this event is an alternative to observing changes in the `selected` attribute.
+         * This event is fired both when a panel is deselected.
+         *
+         * @event iron-deselect {{item: Object}} detail -
+         *     item: The panel that the event refers to.
          */
-        disableSwipe: {
-          type: Boolean,
-          value: false
-        },
+        properties: {
 
-        /**
-         * Whether the user is dragging the drawer interactively.
-         */
-        dragging: {
-          type: Boolean,
-          value: false,
-          readOnly: true,
-          notify: true
-        },
+          /**
+           * The panel to be selected when `paper-drawer-panel` changes to narrow
+           * layout.
+           */
+          defaultSelected: {
+            type: String,
+            value: 'main'
+          },
 
-        /**
-         * Width of the drawer panel.
-         */
-        drawerWidth: {
-          type: String,
-          value: '256px'
-        },
+          /**
+           * If true, swipe from the edge is disabled.
+           */
+          disableEdgeSwipe: {
+            type: Boolean,
+            value: false
+          },
 
-        /**
-         * How many pixels on the side of the screen are sensitive to edge
-         * swipes and peek.
-         */
-        edgeSwipeSensitivity: {
-          type: Number,
-          value: 30
-        },
+          /**
+           * If true, swipe to open/close the drawer is disabled.
+           */
+          disableSwipe: {
+            type: Boolean,
+            value: false
+          },
 
-        /**
-         * If true, ignore `responsiveWidth` setting and force the narrow layout.
-         */
-        forceNarrow: {
-          type: Boolean,
-          value: false
-        },
+          /**
+           * Whether the user is dragging the drawer interactively.
+           */
+          dragging: {
+            type: Boolean,
+            value: false,
+            readOnly: true,
+            notify: true
+          },
 
-        /**
-         * Whether the browser has support for the transform CSS property.
-         */
-        hasTransform: {
-          type: Boolean,
-          value: function() {
-            return 'transform' in this.style;
-          }
-        },
+          /**
+           * Width of the drawer panel.
+           */
+          drawerWidth: {
+            type: String,
+            value: '256px'
+          },
 
-        /**
-         * Whether the browser has support for the will-change CSS property.
-         */
-        hasWillChange: {
-          type: Boolean,
-          value: function() {
-            return 'willChange' in this.style;
-          }
-        },
+          /**
+           * How many pixels on the side of the screen are sensitive to edge
+           * swipes and peek.
+           */
+          edgeSwipeSensitivity: {
+            type: Number,
+            value: 30
+          },
 
-        /**
-         * Returns true if the panel is in narrow layout.  This is useful if you
-         * need to show/hide elements based on the layout.
-         */
-        narrow: {
-          reflectToAttribute: true,
-          type: Boolean,
-          value: false,
-          readOnly: true,
-          notify: true
-        },
+          /**
+           * If true, ignore `responsiveWidth` setting and force the narrow layout.
+           */
+          forceNarrow: {
+            type: Boolean,
+            value: false
+          },
 
-        /**
-         * Whether the drawer is peeking out from the edge.
-         */
-        peeking: {
-          type: Boolean,
-          value: false,
-          readOnly: true,
-          notify: true
-        },
-
-        /**
-         * Max-width when the panel changes to narrow layout.
-         */
-        responsiveWidth: {
-          type: String,
-          value: '640px'
-        },
-
-        /**
-         * If true, position the drawer to the right.
-         */
-        rightDrawer: {
-          type: Boolean,
-          value: false
-        },
-
-        /**
-         * The panel that is being selected. `drawer` for the drawer panel and
-         * `main` for the main panel.
-         */
-        selected: {
-          reflectToAttribute: true,
-          notify: true,
-          type: String,
-          value: null
-        },
-
-        /**
-         * The attribute on elements that should toggle the drawer on tap, also elements will
-         * automatically be hidden in wide layout.
-         */
-        drawerToggleAttribute: {
-          type: String,
-          value: 'paper-drawer-toggle'
-        },
-
-        /**
-         * Whether the transition is enabled.
-         */
-        transition: {
-          type: Boolean,
-          value: false
-        },
-
-      },
-
-      listeners: {
-        tap: '_onTap',
-        track: '_onTrack',
-        down: '_downHandler',
-        up: '_upHandler'
-      },
-
-      observers: [
-        '_forceNarrowChanged(forceNarrow, defaultSelected)'
-      ],
-
-      /**
-       * Toggles the panel open and closed.
-       *
-       * @method togglePanel
-       */
-      togglePanel: function() {
-        if (this._isMainSelected()) {
-          this.openDrawer();
-        } else {
-          this.closeDrawer();
-        }
-      },
-
-      /**
-       * Opens the drawer.
-       *
-       * @method openDrawer
-       */
-      openDrawer: function() {
-        this.selected = 'drawer';
-      },
-
-      /**
-       * Closes the drawer.
-       *
-       * @method closeDrawer
-       */
-      closeDrawer: function() {
-        this.selected = 'main';
-      },
-
-      ready: function() {
-        // Avoid transition at the beginning e.g. page loads and enable
-        // transitions only after the element is rendered and ready.
-        this.transition = true;
-      },
-
-      _computeIronSelectorClass: function(narrow, transition, dragging, rightDrawer, peeking) {
-        return classNames({
-          dragging: dragging,
-          'narrow-layout': narrow,
-          'right-drawer': rightDrawer,
-          'left-drawer': !rightDrawer,
-          transition: transition,
-          peeking: peeking
-        });
-      },
-
-      _computeDrawerStyle: function(drawerWidth) {
-        return 'width:' + drawerWidth + ';';
-      },
-
-      _computeMainStyle: function(narrow, rightDrawer, drawerWidth) {
-        var style = '';
-
-        style += 'left:' + ((narrow || rightDrawer) ? '0' : drawerWidth) + ';';
-
-        if (rightDrawer) {
-          style += 'right:' + (narrow ? '' : drawerWidth) + ';';
-        }
-
-        return style;
-      },
-
-      _computeMediaQuery: function(forceNarrow, responsiveWidth) {
-        return forceNarrow ? '' : '(max-width: ' + responsiveWidth + ')';
-      },
-
-      _computeSwipeOverlayHidden: function(narrow, disableEdgeSwipe) {
-        return !narrow || disableEdgeSwipe;
-      },
-
-      _onTrack: function(event) {
-        if (sharedPanel && this !== sharedPanel) {
-          return;
-        }
-        switch (event.detail.state) {
-          case 'start':
-            this._trackStart(event);
-            break;
-          case 'track':
-            this._trackX(event);
-            break;
-          case 'end':
-            this._trackEnd(event);
-            break;
-        }
-
-      },
-
-      _responsiveChange: function(narrow) {
-        this._setNarrow(narrow);
-
-        if (this.narrow) {
-          this.selected = this.defaultSelected;
-        }
-
-        this.setScrollDirection(this._swipeAllowed() ? 'y' : 'all');
-        this.fire('paper-responsive-change', {narrow: this.narrow});
-      },
-
-      _onQueryMatchesChanged: function(event) {
-        this._responsiveChange(event.detail.value);
-      },
-
-      _forceNarrowChanged: function() {
-        // set the narrow mode only if we reached the `responsiveWidth`
-        this._responsiveChange(this.forceNarrow || this.$.mq.queryMatches);
-      },
-
-      _swipeAllowed: function() {
-        return this.narrow && !this.disableSwipe;
-      },
-
-      _isMainSelected: function() {
-        return this.selected === 'main';
-      },
-
-      _startEdgePeek: function() {
-        this.width = this.$.drawer.offsetWidth;
-        this._moveDrawer(this._translateXForDeltaX(this.rightDrawer ?
-            -this.edgeSwipeSensitivity : this.edgeSwipeSensitivity));
-        this._setPeeking(true);
-      },
-
-      _stopEdgePeek: function() {
-        if (this.peeking) {
-          this._setPeeking(false);
-          this._moveDrawer(null);
-        }
-      },
-
-      _downHandler: function(event) {
-        if (!this.dragging && this._isMainSelected() && this._isEdgeTouch(event) && !sharedPanel) {
-          this._startEdgePeek();
-          // cancel selection
-          event.preventDefault();
-          // grab this panel
-          sharedPanel = this;
-        }
-      },
-
-      _upHandler: function() {
-        this._stopEdgePeek();
-        // release the panel
-        sharedPanel = null;
-      },
-
-      _onTap: function(event) {
-        var targetElement = Polymer.dom(event).localTarget;
-        var isTargetToggleElement = targetElement &&
-          this.drawerToggleAttribute &&
-          targetElement.hasAttribute(this.drawerToggleAttribute);
-
-        if (isTargetToggleElement) {
-          this.togglePanel();
-        }
-      },
-
-      _isEdgeTouch: function(event) {
-        var x = event.detail.x;
-
-        return !this.disableEdgeSwipe && this._swipeAllowed() &&
-          (this.rightDrawer ?
-            x >= this.offsetWidth - this.edgeSwipeSensitivity :
-            x <= this.edgeSwipeSensitivity);
-      },
-
-      _trackStart: function(event) {
-        if (this._swipeAllowed()) {
-          sharedPanel = this;
-          this._setDragging(true);
-
-          if (this._isMainSelected()) {
-            this._setDragging(this.peeking || this._isEdgeTouch(event));
-          }
-
-          if (this.dragging) {
-            this.width = this.$.drawer.offsetWidth;
-            this.transition = false;
-          }
-        }
-      },
-
-      _translateXForDeltaX: function(deltaX) {
-        var isMain = this._isMainSelected();
-
-        if (this.rightDrawer) {
-          return Math.max(0, isMain ? this.width + deltaX : deltaX);
-        } else {
-          return Math.min(0, isMain ? deltaX - this.width : deltaX);
-        }
-      },
-
-      _trackX: function(event) {
-        if (this.dragging) {
-          var dx = event.detail.dx;
-
-          if (this.peeking) {
-            if (Math.abs(dx) <= this.edgeSwipeSensitivity) {
-              // Ignore trackx until we move past the edge peek.
-              return;
+          /**
+           * Whether the browser has support for the transform CSS property.
+           */
+          hasTransform: {
+            type: Boolean,
+            value: function() {
+              return 'transform' in this.style;
             }
-            this._setPeeking(false);
+          },
+
+          /**
+           * Whether the browser has support for the will-change CSS property.
+           */
+          hasWillChange: {
+            type: Boolean,
+            value: function() {
+              return 'willChange' in this.style;
+            }
+          },
+
+          /**
+           * Returns true if the panel is in narrow layout.  This is useful if you
+           * need to show/hide elements based on the layout.
+           */
+          narrow: {
+            reflectToAttribute: true,
+            type: Boolean,
+            value: false,
+            readOnly: true,
+            notify: true
+          },
+
+          /**
+           * Whether the drawer is peeking out from the edge.
+           */
+          peeking: {
+            type: Boolean,
+            value: false,
+            readOnly: true,
+            notify: true
+          },
+
+          /**
+           * Max-width when the panel changes to narrow layout.
+           */
+          responsiveWidth: {
+            type: String,
+            value: '600px'
+          },
+
+          /**
+           * If true, position the drawer to the right.
+           */
+          rightDrawer: {
+            type: Boolean,
+            value: false
+          },
+
+          /**
+           * The panel that is being selected. `drawer` for the drawer panel and
+           * `main` for the main panel.
+           */
+          selected: {
+            reflectToAttribute: true,
+            notify: true,
+            type: String,
+            value: null
+          },
+
+          /**
+           * The attribute on elements that should toggle the drawer on tap, also elements will
+           * automatically be hidden in wide layout.
+           */
+          drawerToggleAttribute: {
+            type: String,
+            value: 'paper-drawer-toggle'
+          },
+
+          /**
+           * Whether the transition is enabled.
+           */
+          transition: {
+            type: Boolean,
+            value: false
+          },
+
+        },
+
+        listeners: {
+          tap: '_onTap',
+          track: '_onTrack',
+          down: '_downHandler',
+          up: '_upHandler'
+        },
+
+        observers: [
+          '_forceNarrowChanged(forceNarrow, defaultSelected)'
+        ],
+
+        /**
+         * Toggles the panel open and closed.
+         *
+         * @method togglePanel
+         */
+        togglePanel: function() {
+          if (this._isMainSelected()) {
+            this.openDrawer();
+          } else {
+            this.closeDrawer();
+          }
+        },
+
+        /**
+         * Opens the drawer.
+         *
+         * @method openDrawer
+         */
+        openDrawer: function() {
+          this.selected = 'drawer';
+        },
+
+        /**
+         * Closes the drawer.
+         *
+         * @method closeDrawer
+         */
+        closeDrawer: function() {
+          this.selected = 'main';
+        },
+
+        ready: function() {
+          // Avoid transition at the beginning e.g. page loads and enable
+          // transitions only after the element is rendered and ready.
+          this.transition = true;
+        },
+
+        _onMainTransitionEnd: function (e) {
+          if (e.currentTarget === this.$.main && (e.propertyName === 'left' || e.propertyName === 'right')) {
+            this.notifyResize();
+          }
+        },
+
+        _computeIronSelectorClass: function(narrow, transition, dragging, rightDrawer, peeking) {
+          return classNames({
+            dragging: dragging,
+            'narrow-layout': narrow,
+            'right-drawer': rightDrawer,
+            'left-drawer': !rightDrawer,
+            transition: transition,
+            peeking: peeking
+          });
+        },
+
+        _computeDrawerStyle: function(drawerWidth) {
+          return 'width:' + drawerWidth + ';';
+        },
+
+        _computeMainStyle: function(narrow, rightDrawer, drawerWidth) {
+          var style = '';
+
+          style += 'left:' + ((narrow || rightDrawer) ? '0' : drawerWidth) + ';';
+
+          if (rightDrawer) {
+            style += 'right:' + (narrow ? '' : drawerWidth) + ';';
           }
 
-          this._moveDrawer(this._translateXForDeltaX(dx));
-        }
-      },
+          return style;
+        },
 
-      _trackEnd: function(event) {
-        if (this.dragging) {
-          var xDirection = event.detail.dx > 0;
+        _computeMediaQuery: function(forceNarrow, responsiveWidth) {
+          return forceNarrow ? '' : '(max-width: ' + responsiveWidth + ')';
+        },
 
-          this._setDragging(false);
-          this.transition = true;
+        _computeSwipeOverlayHidden: function(narrow, disableEdgeSwipe) {
+          return !narrow || disableEdgeSwipe;
+        },
+
+        _onTrack: function(event) {
+          if (sharedPanel && this !== sharedPanel) {
+            return;
+          }
+          switch (event.detail.state) {
+            case 'start':
+              this._trackStart(event);
+              break;
+            case 'track':
+              this._trackX(event);
+              break;
+            case 'end':
+              this._trackEnd(event);
+              break;
+          }
+
+        },
+
+        _responsiveChange: function(narrow) {
+          this._setNarrow(narrow);
+
+          if (this.narrow) {
+            this.selected = this.defaultSelected;
+          }
+
+          this.setScrollDirection(this._swipeAllowed() ? 'y' : 'all');
+          this.fire('paper-responsive-change', {narrow: this.narrow});
+        },
+
+        _onQueryMatchesChanged: function(event) {
+          this._responsiveChange(event.detail.value);
+        },
+
+        _forceNarrowChanged: function() {
+          // set the narrow mode only if we reached the `responsiveWidth`
+          this._responsiveChange(this.forceNarrow || this.$.mq.queryMatches);
+        },
+
+        _swipeAllowed: function() {
+          return this.narrow && !this.disableSwipe;
+        },
+
+        _isMainSelected: function() {
+          return this.selected === 'main';
+        },
+
+        _startEdgePeek: function() {
+          this.width = this.$.drawer.offsetWidth;
+          this._moveDrawer(this._translateXForDeltaX(this.rightDrawer ?
+              -this.edgeSwipeSensitivity : this.edgeSwipeSensitivity));
+          this._setPeeking(true);
+        },
+
+        _stopEdgePeek: function() {
+          if (this.peeking) {
+            this._setPeeking(false);
+            this._moveDrawer(null);
+          }
+        },
+
+        _downHandler: function(event) {
+          if (!this.dragging && this._isMainSelected() && this._isEdgeTouch(event) && !sharedPanel) {
+            this._startEdgePeek();
+            // cancel selection
+            event.preventDefault();
+            // grab this panel
+            sharedPanel = this;
+          }
+        },
+
+        _upHandler: function() {
+          this._stopEdgePeek();
+          // release the panel
           sharedPanel = null;
-          this._moveDrawer(null);
+        },
+
+        _onTap: function(event) {
+          var targetElement = Polymer.dom(event).localTarget;
+          var isTargetToggleElement = targetElement &&
+            this.drawerToggleAttribute &&
+            targetElement.hasAttribute(this.drawerToggleAttribute);
+
+          if (isTargetToggleElement) {
+            this.togglePanel();
+          }
+        },
+
+        _isEdgeTouch: function(event) {
+          var x = event.detail.x;
+
+          return !this.disableEdgeSwipe && this._swipeAllowed() &&
+            (this.rightDrawer ?
+              x >= this.offsetWidth - this.edgeSwipeSensitivity :
+              x <= this.edgeSwipeSensitivity);
+        },
+
+        _trackStart: function(event) {
+          if (this._swipeAllowed()) {
+            sharedPanel = this;
+            this._setDragging(true);
+
+            if (this._isMainSelected()) {
+              this._setDragging(this.peeking || this._isEdgeTouch(event));
+            }
+
+            if (this.dragging) {
+              this.width = this.$.drawer.offsetWidth;
+              this.transition = false;
+            }
+          }
+        },
+
+        _translateXForDeltaX: function(deltaX) {
+          var isMain = this._isMainSelected();
 
           if (this.rightDrawer) {
-            this[xDirection ? 'closeDrawer' : 'openDrawer']();
+            return Math.max(0, isMain ? this.width + deltaX : deltaX);
           } else {
-            this[xDirection ? 'openDrawer' : 'closeDrawer']();
+            return Math.min(0, isMain ? deltaX - this.width : deltaX);
           }
+        },
+
+        _trackX: function(event) {
+          if (this.dragging) {
+            var dx = event.detail.dx;
+
+            if (this.peeking) {
+              if (Math.abs(dx) <= this.edgeSwipeSensitivity) {
+                // Ignore trackx until we move past the edge peek.
+                return;
+              }
+              this._setPeeking(false);
+            }
+
+            this._moveDrawer(this._translateXForDeltaX(dx));
+          }
+        },
+
+        _trackEnd: function(event) {
+          if (this.dragging) {
+            var xDirection = event.detail.dx > 0;
+
+            this._setDragging(false);
+            this.transition = true;
+            sharedPanel = null;
+            this._moveDrawer(null);
+
+            if (this.rightDrawer) {
+              this[xDirection ? 'closeDrawer' : 'openDrawer']();
+            } else {
+              this[xDirection ? 'openDrawer' : 'closeDrawer']();
+            }
+          }
+        },
+
+        _transformForTranslateX: function(translateX) {
+          if (translateX === null) {
+            return '';
+          }
+
+          return this.hasWillChange ? 'translateX(' + translateX + 'px)' :
+              'translate3d(' + translateX + 'px, 0, 0)';
+        },
+
+        _moveDrawer: function(translateX) {
+          this.transform(this._transformForTranslateX(translateX), this.$.drawer);
         }
-      },
 
-      _transformForTranslateX: function(translateX) {
-        if (translateX === null) {
-          return '';
-        }
-
-        return this.hasWillChange ? 'translateX(' + translateX + 'px)' :
-            'translate3d(' + translateX + 'px, 0, 0)';
-      },
-
-      _moveDrawer: function(translateX) {
-        this.transform(this._transformForTranslateX(translateX), this.$.drawer);
-      }
-
-    });
-
-  }());
+      });
+    }());
