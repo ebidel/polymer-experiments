@@ -21,4 +21,8 @@ js_out_file=elements.v.js
 
 vulcanize elements.html \
     --inline-script --inline-css --strip-comments | \
-    crisper -h $html_out_file -j $js_out_file
+    crisper --script-in-head -h $html_out_file -j $js_out_file
+
+# vulcanize --inline-script --inline-css --strip-comments \
+#     --exclude "bower_components/webcomponentsjs/webcomponents-lite.min.js" appshell.html | \
+#     crisper --script-in-head -h appshell.v.html  -j appshell.v.js
