@@ -2,42 +2,59 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>FOUC demo</title>
+<title>Polymer first paint / load demos</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
-<script src="bower_components/webcomponentsjs/webcomponents-lite.min.js" async></script>
-<link rel="import" href="elements.v.html" async>
 <link rel="stylesheet" href="styles.css">
+<style>
+* {
+  font-weight: 300;
+}
+html, body {
+  background-color: #fff;
+}
+body {
+  margin: 40px;
+  line-height: 1.6;
+}
+</style>
 </head>
-<body class="fullbleed">
+<body>
 
-<paper-drawer-panel force-narrow>
-  <paper-header-panel drawer>
-    <paper-toolbar>
-      <div>FOUC demo</div>
-    </paper-toolbar>
-    <div>
-      <paper-menu>
-        <paper-item>Item 1</paper-item>
-        <paper-item>Item 2</paper-item>
-        <paper-item>Item 3</paper-item>
-        <paper-item>Item 4</paper-item>
-        <paper-item>Item 5</paper-item>
-      </paper-menu>
-    </div>
-  </paper-header-panel>
-  <paper-header-panel main mode="cover">
-    <paper-toolbar class="tall" id="maintoolbar">
-      <paper-icon-button icon="menu" paper-drawer-toggle></paper-icon-button>
-      <!-- <div>FOUC demo</div> -->
-    </paper-toolbar>
-    <div class="layout vertical center scroll-content">
-      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
-      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
-      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
-      <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
-    </div>
-  </paper-header-panel>
-</paper-drawer-panel>
+<h1>Polymer app first paint / loading demos</h1>
+
+<ol>
+  <li>
+    <a href="unresolved.html">body unresolved</a> - Polymer's <code>&lt;body unresolved></code> features hides page (white-out) until everything is ready. This is an easy control for FOUC.
+    <ul>
+      <li>No FOUC</li>
+      <li>Slow first paint</li>
+    </ul>
+  </li>
+  <li>
+    <a href="fouc.html">Async loading</a> - async loading elements is fast, but can cause visual FOUC as elements upgrade.
+    <ul>
+      <li>FOUC</li>
+      <li>Fast first paint</li>
+    </ul>
+  </li>
+  <li>
+    <a href="appshell.html">App shell concept</a> - shows how the app shell concept can remove FOUC by pre-styling markup before it upgrades.
+    <ul>
+      <li>No FOUC</li>
+      <li>Fast first paint</li>
+    </ul>
+  </li>
+  <li>
+    <a href="binding.html">Polymer is="body-bind"</a> - shows how you can create a super fast loading app that and still use Polymer's features (data binding, observers, etc.) in the main page.
+    <ul>
+      <li>No FOUC</li>
+      <li>Fast first paint</li>
+      <li>use Polymer features in main page</li>
+    </ul>
+  </li>
+</ol>
+
+<p><b>Note</b>: In the demos, open the console to see first paint times (Chrome only).</p>
 
 <script>
   (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

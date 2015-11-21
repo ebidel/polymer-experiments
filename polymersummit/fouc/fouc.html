@@ -7,69 +7,6 @@
 <script src="bower_components/webcomponentsjs/webcomponents-lite.min.js" async></script>
 <link rel="import" href="elements/elements.v.html" async>
 <link rel="stylesheet" href="styles.css">
-<style>
-/* Critical CSS is inlined which styles the "app shell", giving it layout
-   and other styling to mimic the final look of the custom elements' CSS.
-   The styling for those elements is defined in their element definitions in
-   and loaded in elements.html when the element are registered. When the elements
-   load + upgrade, their CSS will start applying and the :unresolved pseudo
-   selector will no longer apply. */
-html, body {
-  font-family: 'Roboto', sans-serif;
-  background-color: #eee;
-  margin: 0;
-}
-paper-toolbar, paper-card, paper-drawer-panel {
-  display: block;
-}
-paper-toolbar:unresolved.tall {
-  height: 192px;
-}
-/*paper-toolbar[unresolved].tall {
-  height: 192px;
-}*/
-paper-toolbar:unresolved {
-  color: #fff;
-  background: #42A5F5 !important;
-}
-/*paper-toolbar[unresolved] {
-  color: #fff;
-  background: #42A5F5 !important;
-}*/
-paper-header-panel[drawer]:unresolved {
-  display: none;
-}
-/*paper-header-panel[drawer][unresolved] {
-  display: none;
-}*/
-paper-card:unresolved {
-  background: #fff;
-  border-radius: 2px;
-}
-/*paper-card[unresolved] {
-  background: #fff;
-  border-radius: 2px;
-}*/
-:unresolved .scroll-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: -132px !important;
-}
-/*[unresolved] .scroll-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: -132px !important;
-}*/
-</style>
-<style is="custom-style">
-paper-drawer-panel[selected="main"] {
-  --paper-drawer-panel-scrim: {
-    opacity: 0 !important;
-  };
-}
-</style>
 </head>
 <body class="fullbleed">
 
@@ -94,7 +31,7 @@ paper-drawer-panel[selected="main"] {
       <!-- <div>FOUC demo</div> -->
     </paper-toolbar>
     <div class="layout vertical center scroll-content">
-      <paper-card>This page async loads custom elements and "progressively enhances" markup by using the appshell concept to remove FOUC. Critical CSS is inlined which styles the "app shell", giving it layout and other styling to mimic the final look of the custom elements' CSS. The styling for those elements is defined in their element definitions in and loaded in elements.html when the element are registered. When the elements load + upgrade, their CSS will start applying and the :unresolved pseudo selector will no longer apply.
+      <paper-card>This page async loads custom elements and does not block first paint. However, you can visually see the FOUC as custom elements upgrade and load their CSS.
       <h4>First paint: <output><output></h4>
       </paper-card>
       <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
@@ -105,20 +42,6 @@ paper-drawer-panel[selected="main"] {
 </paper-drawer-panel>
 
 <script>
-// Need to update custom prop styling when drawer selector changes.
-// This applies the drawer's scrim backdrop.
-var drawer = document.querySelector('paper-drawer-panel');
-drawer.addEventListener('iron-select', function(e) {
-  drawer.async(function() {
-    Polymer.updateStyles();
-  }, 0);
-});
-
-// var unresolvedEls = document.querySelectorAll('[unresolved]');
-// [].forEach.call(unresolvedEls, function(el, i) {
-//   el.removeAttribute('unresolved');
-// });
-
 (function() {
   'use strict';
 
@@ -134,7 +57,7 @@ drawer.addEventListener('iron-select', function(e) {
         document.querySelector('output').textContent = fp + ' ms';
         document.title += ' - ' + fp + ' ms fp';
       };
-      setTimeout(render, 50); // Wait a tick so we're guaranteed a fp time.
+      setTimeout(render, 0); // Wait a tick so we're guaranteed a fp time.
     };
   }
 })();
