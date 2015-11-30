@@ -79,7 +79,10 @@ paper-drawer-panel[selected="main"] {
     <div class="layout vertical center scroll-content">
       <paper-card>
         This page async loads everything, loads fast, first paints fast,
-        and uses Polymer <code>&lt;body is="body-bind"></code> to leverage Polymer features in the main page.
+        and uses Polymer <code>&lt;body is="body-bind"></code> to lazy-bind
+        Polymer's data binding features in the main page. It does not block
+        rendering. Instead, a critical resource bundle is loaded via HTML imports
+        followed by the rest of elements used by the page.
         <h3>Metrics</h3>
         <div id="fp_output"><span>First paint:</span><output>-</output></div>
         <div id="c_output"><span>Critical bundle:</span><output>-</output></div>
