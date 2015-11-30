@@ -2,27 +2,35 @@
 #
 # Copyright 2015 Eric Bidelman <ericbidelman@chromium.org>
 
-# html_out_file=index.v.html
-# js_out_file=index.v.js
 
-# vulcanize index.html \
-#     --inline-script --inline-css --strip-comments | \
-#     crisper -h $html_out_file -j $js_out_file
+# Vulcanize main demos ---------------------------------------------------------
 
-# html_out_file=appshell.v.html
-# js_out_file=appshell.v.js
+html_out_file=elements/elements.v.html
+js_out_file=elements/elements.v.js
 
-# vulcanize appshell.html \
-#     --inline-script --inline-css --strip-comments | \
-#     crisper -h $html_out_file -j $js_out_file
-
-html_out_file=elements.v.html
-js_out_file=elements.v.js
-
-vulcanize elements.html \
+vulcanize elements/elements.html \
     --inline-script --inline-css --strip-comments | \
     crisper --script-in-head -h $html_out_file -j $js_out_file
+uglifyjs $js_out_file -c -o $js_out_file
 
-# vulcanize --inline-script --inline-css --strip-comments \
-#     --exclude "bower_components/webcomponentsjs/webcomponents-lite.min.js" appshell.html | \
-#     crisper --script-in-head -h appshell.v.html  -j appshell.v.js
+
+# Polymer is="dom=bing" demo ---------------------------------------------------
+
+html_out_file=elements/elements-no-polymer.v.html
+js_out_file=elements/elements-no-polymer.v.js
+
+vulcanize elements/elements.html \
+    --strip-exclude "bower_components/polymer/" \
+    --inline-script --inline-css --strip-comments | \
+    crisper --script-in-head -h $html_out_file -j $js_out_file
+babel $js_out_file -o $js_out_file
+# uglifyjs $js_out_file -c -o $js_out_file
+
+html_out_file=elements/bootstrap.v.html
+js_out_file=elements/bootstrap.v.js
+
+vulcanize elements/bootstrap.html \
+    --inline-script --inline-css --strip-comments | \
+    crisper --script-in-head -h $html_out_file -j $js_out_file
+babel $js_out_file -o $js_out_file
+# uglifyjs $js_out_file -c -o $js_out_file

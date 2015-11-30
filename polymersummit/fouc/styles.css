@@ -3,13 +3,24 @@ html, body {
   background-color: #eee;
   margin: 0;
 }
+h1,h2,h3 {
+  font-weight: 300;
+}
+ul {
+  list-style: none;
+}
+span {
+  margin-right: 8px;
+  display: inline-block;
+  min-width: 130px;
+}
 paper-toolbar {
   color: #fff;
   background: #42A5F5 !important;
 }
 paper-card {
   width: 600px;
-  height: 400px;
+  height: 450px;
   max-width: 100%;
   margin-bottom: 24px;
   padding: 32px;

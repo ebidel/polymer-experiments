@@ -7,10 +7,12 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC",
+  "license": "Apache2",
   "dependencies": {
-    "babel": "^5.8.21",
-    "crisper": "^1.0.7",
-    "vulcanize": "^1.10.3"
+    "babel-cli": "^6.2.0",
+    "babel-preset-es2015": "^6.1.18",
+    "crisper": "^2.0.0",
+    "uglify-js": "^2.6.1",
+    "vulcanize": "^1.14.0"
   }
 }
