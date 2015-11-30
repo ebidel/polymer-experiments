@@ -59,7 +59,7 @@
   }
 
   // Phase 3: Async fetch vulcanied elements bundle last.
-  importHref('/elements/elements-no-polymer.v.html').then(function(link) {
+  importHref('elements/elements-no-polymer.v.html').then(function(link) {
     var entry = window.performance.getEntriesByName(link.href)[0];
     var str = `started @ ${entry.startTime.toFixed(2)} ms, took: ${entry.duration.toFixed(2)} ms`;
     console.info('Elements bundle: ' + str);
