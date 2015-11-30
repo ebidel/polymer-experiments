@@ -1,3 +1,76 @@
-<link rel="import" href="bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/polymer/polymer.html">
 <link rel="import" href="body-bind.html">
-<link rel="import" href="elements.html">
+<!-- <link rel="import" href="elements.html"> -->
+
+<!-- Phase 2: bootstrap some of the app's initial data. -->
+<script>
+(function() {
+'use strict';
+
+  Polymer({
+    is: 'my-app',
+    extends: 'body',
+    behaviors: [Polymer.LightDomBindingBehavior],
+    properties: {
+      text: {
+        type: String,
+        value: 'Data-bound str!'
+      },
+      obj: {
+        type: Object,
+        value: {person: {name: 'Eric'}}
+      },
+      versions: {
+        type: Array,
+        // readOnly: true,
+        value: function() { return []; }
+      }
+    },
+    // created: function() {
+    //   let url = 'https://www.chromestatus.com/omaha_data';
+    //   fetch(url).then(resp => resp.json()).then(json => {
+    //     let versions = json[0].versions.map(platform => ({
+    //       channel: platform.channel,
+    //       version: platform.version
+    //     }));
+    //     this._setVersions(versions);
+    //   });
+    // },
+    // ready: function() {
+    //   console.log('my-app is upgraded');
+    // },
+  });
+
+  // TODO: use Polymer.Base.importHref when it uses .async.
+  function importHref(href, async=true) {
+    return new Promise((resolve, reject) => {
+      var l = document.createElement('link');
+      l.rel = 'import';
+      // TODO: https://crbug.com/563217 - setting async property doesn't work.
+      if (async) {
+        l.setAttribute('async', '');
+      }
+      l.href = href;
+      l.onload = e => resolve(e.target);
+      l.onerror = reject;
+
+      document.head.appendChild(l);
+    });
+  }
+
+  // Phase 3: Async fetch vulcanied elements bundle last.
+  importHref('/elements/elements-no-polymer.v.html').then(function(link) {
+    var entry = window.performance.getEntriesByName(link.href)[0];
+    var str = `started @ ${entry.startTime.toFixed(2)} ms, took: ${entry.duration.toFixed(2)} ms`;
+    console.info('Elements bundle: ' + str);
+    document.querySelector('#e_output output').textContent = str;
+  }, e => console.error(e));
+
+})();
+</script>
+
+<!--
+Declaratively loading elements.html would work and it would get vulcanized
+with bootstrap.html. However, causes the entire download to take longer,
+thus increasing the time until the bindings have data. -->
+<!-- <link rel="import" href="elements.html"> -->

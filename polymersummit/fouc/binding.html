@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <title>FOUC demo</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
-<script src="bower_components/webcomponentsjs/webcomponents-lite.min.js" async></script>
-<!-- <link rel="import" href="elements/elements.v.html" async> -->
-<link rel="import" href="elements/bootstrap.v.html" async>
+<!-- Phase 1: load critically small vulcanized bundle upfront.
+     It loads Polymer, setups up some initial data and dynamically loads the
+     rest of the page's elements. -->
+<link rel="import" href="elements/bootstrap.html" id="critical" async>
 <link rel="stylesheet" href="styles.css">
 <style>
 /* Critical CSS is inlined which styles the "app shell", giving it layout
@@ -52,7 +53,8 @@ paper-drawer-panel[selected="main"] {
 }
 </style>
 </head>
-<body is="body-bind" class="fullbleed">
+<body is="my-app" id="app" class="fullbleed">
+<!-- <body is="body-bind" class="fullbleed"> -->
 
 <paper-drawer-panel force-narrow>
   <paper-header-panel drawer>
@@ -75,9 +77,24 @@ paper-drawer-panel[selected="main"] {
       <!-- <div>FOUC demo</div> -->
     </paper-toolbar>
     <div class="layout vertical center scroll-content">
-      <paper-card>This page async loads everything, loads fast, first paints fast,
-      and uses Polymer is="dom-bind" to leverage Polymer features in the main page.
-      <h4>First paint: <output><output></h4>
+      <paper-card>
+        This page async loads everything, loads fast, first paints fast,
+        and uses Polymer <code>&lt;body is="body-bind"></code> to leverage Polymer features in the main page.
+        <h3>Metrics</h3>
+        <div id="fp_output"><span>First paint:</span><output>-</output></div>
+        <div id="c_output"><span>Critical bundle:</span><output>-</output></div>
+        <div id="e_output"><span>Elements bundle:</span><output>-</output></div>
+        <h3>Late-bound data examples</h3>
+        <div>
+          <span>String binding:</span><span text-content="{{text}}"></span><br>
+          <span>Object binding:</span><span text-content="{{obj.person.name}}"></span><br>
+          <span>Array binding (dynamically fetched pre-Polymer):</span>
+        </div>
+        <ul>
+          <template is="dom-repeat" items="[[versions]]">
+            <li><span>{{item.channel}}</span><span>{{item.version}}</span></li>
+          </template>
+        </ul>
       </paper-card>
       <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
       <paper-card>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum</paper-card>
@@ -87,6 +104,66 @@ paper-drawer-panel[selected="main"] {
 </paper-drawer-panel>
 
 <script>
+var app = document.querySelector('#app');
+
+function lazyloadWebComponentsPolyfills() {
+  var webComponentsSupported = ('registerElement' in document
+      && 'import' in document.createElement('link')
+      && 'content' in document.createElement('template'));
+
+  if (!webComponentsSupported) {
+    var script = document.createElement('script');
+    script.async = true;
+    script.src = '/bower_components/webcomponentsjs/webcomponents-lite.min.js';
+    // script.onload = finishLazyLoading;
+    document.head.appendChild(script);
+  }
+}
+
+function fetchData(url) {
+  console.time('Data fetch');
+  return fetch(url).then(resp => resp.json()).then(json => {
+    console.timeEnd('Data fetch');
+    return json[0].versions.map(platform => ({
+      channel: platform.channel,
+      version: platform.version
+    }));
+  });
+}
+
+function setupCriticalBundleMetics() {
+  // Critical imports bundle perf.
+  var critcalBundle = document.querySelector('#critical');
+  critcalBundle.onload = function(e) {
+    var entry = performance.getEntriesByName(e.target.href)[0];
+    var str = `started @ ${entry.startTime.toFixed(2)} ms, took: ${entry.duration.toFixed(2)} ms`;
+    console.info('Critical bundle: ' + str);
+    document.querySelector('#c_output output').textContent = str;
+  };
+}
+
+function setupFirstPaintMetrics() {
+  'use strict';
+
+  // First paint perf.
+  if (window.chrome && chrome.loadTimes) {
+    const getFP = function() {
+      let load = chrome.loadTimes();
+      let fp = (load.firstPaintTime - load.startLoadTime) * 1000;
+      return Math.round(fp);
+    };
+
+    window.onload = e => {
+      let render = () => {
+        let fp = getFP();
+        document.querySelector('#fp_output output').textContent = fp + ' ms';
+        document.title += ' - ' + fp + ' ms fp';
+      };
+      setTimeout(render, 100); // Wait a tick so we're guaranteed a fp time.
+    };
+  }
+}
+
 // Need to update custom prop styling when drawer selector changes.
 var drawer = document.querySelector('paper-drawer-panel');
 drawer.addEventListener('iron-select', function(e) {
@@ -100,26 +177,18 @@ drawer.addEventListener('iron-select', function(e) {
 //   el.removeAttribute('unresolved');
 // });
 
-(function() {
-  'use strict';
+// Start fetching data before elements are even upgraded.
+var dataPromise = fetchData('https://www.chromestatus.com/omaha_data');
 
-  if (chrome.loadTimes) {
-    function getFP() {
-      let load = chrome.loadTimes();
-      let fp = (load.firstPaintTime - load.startLoadTime) * 1000;
-      return Math.round(fp);
-    }
-    window.onload = (e) => {
-      let render = () => {
-        let fp = getFP();
-        document.querySelector('output').textContent = fp + ' ms';
-        document.title += ' - ' + fp + ' ms fp';
-      };
-      setTimeout(render, 100); // Wait a tick so we're guaranteed a fp time.
-    };
-  }
-})();
+document.body.addEventListener('dom-change', function(e) {
+  dataPromise.then(versions => app.versions = versions);
+});
 
+setupFirstPaintMetrics();
+setupCriticalBundleMetics();
+lazyloadWebComponentsPolyfills();
+
+// Analytics.
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
 (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
 m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)

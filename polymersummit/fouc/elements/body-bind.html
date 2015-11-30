@@ -19,7 +19,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       // This is opt-in because it is expensive; it either needs to be in
       // a permanent top-level host with `lazyChildren` property set, or else
       // each instance needs to set the `lazy-bind` attribute
-      if (this.hasAttribute('lazy-bind') ||
+      if (this.is && this.hasAttribute('lazy-bind') ||
           (this.dataHost && this.dataHost.lazyChildren)) {
         for (var p in this._propertyEffects) {
           if (this.hasOwnProperty(p)) {
