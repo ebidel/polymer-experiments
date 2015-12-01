@@ -27,6 +27,5 @@ value:function value(){return [];}}}}); // TODO: use Polymer.Base.importHref whe
 // ready: function() {
 //   console.log('my-app is upgraded');
 // },
-function importHref(href){var async=arguments.length <= 1 || arguments[1] === undefined?true:arguments[1];return new Promise(function(resolve,reject){var l=document.createElement('link');l.rel = 'import'; // TODO: https://crbug.com/563217 - setting async property doesn't work.
-if(async){l.setAttribute('async','');}l.href = href;l.onload = function(e){return resolve(e.target);};l.onerror = reject;document.head.appendChild(l);});} // Phase 3: Async fetch vulcanied elements bundle last.
+function importHref(href){var async=arguments.length <= 1 || arguments[1] === undefined?true:arguments[1];return new Promise(function(resolve,reject){var l=document.createElement('link');l.rel = 'import';l.href = href;if(async){l.setAttribute('async','');}l.onload = function(e){return resolve(e.target);};l.onerror = reject;document.head.appendChild(l);});} // Phase 3: Async fetch vulcanied elements bundle last.
 importHref('elements/elements-no-polymer.v.html').then(function(link){var entry=window.performance.getEntriesByName(link.href)[0];var str='started @ ' + entry.startTime.toFixed(2) + ' ms, took: ' + entry.duration.toFixed(2) + ' ms';console.info('Elements bundle: ' + str);document.querySelector('#e_output output').textContent = str;},function(e){return console.error(e);});})();

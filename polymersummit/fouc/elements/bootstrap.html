@@ -46,11 +46,10 @@
     return new Promise((resolve, reject) => {
       var l = document.createElement('link');
       l.rel = 'import';
-      // TODO: https://crbug.com/563217 - setting async property doesn't work.
+      l.href = href;
       if (async) {
         l.setAttribute('async', '');
       }
-      l.href = href;
       l.onload = e => resolve(e.target);
       l.onerror = reject;
 
