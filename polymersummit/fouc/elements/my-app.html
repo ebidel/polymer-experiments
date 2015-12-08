@@ -1,0 +1,38 @@
+<script>
+Polymer({
+  is: 'my-app',
+  extends: 'body',
+  behaviors: [Polymer.LightDomBindingBehavior],
+  properties: {
+    text: {
+      type: String,
+      value: 'Data-bound str!'
+    },
+    obj: {
+      type: Object,
+      value: {person: {name: 'Eric'}}
+    },
+    versions: {
+      type: Array,
+      // readOnly: true,
+      value: function() { return []; }
+    }
+  },
+  sayHi: function() {
+    alert('hi');
+  }
+  // created: function() {
+  //   let url = 'https://www.chromestatus.com/omaha_data';
+  //   fetch(url).then(resp => resp.json()).then(json => {
+  //     let versions = json[0].versions.map(platform => ({
+  //       channel: platform.channel,
+  //       version: platform.version
+  //     }));
+  //     this._setVersions(versions);
+  //   });
+  // },
+  // ready: function() {
+  //   console.log('my-app is upgraded');
+  // },
+});
+</script>

@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Polymer first paint / load demos</title>
+<title>Polymer app first paint / load demos</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -13,8 +13,67 @@ html, body {
   background-color: #fff;
 }
 body {
-  margin: 40px;
+  margin: 40px 60px;
   line-height: 1.6;
+  color: #78909C;
+}
+h1, h2 {
+  color: #546E7A;
+  font-size: 28px;
+}
+h2 {
+  font-size: 24px;
+}
+body > ol {
+  list-style: none;
+  padding: 0;
+}
+ol > li {
+  padding: 16px 0;
+  color: #546E7A;
+}
+li a {
+  margin-right: 16px;
+}
+.good {
+  color: #388E3C;
+}
+.good::before {
+  content: '\2713';
+  color: currentcolor;
+  margin-right: 8px;
+}
+.bad {
+  color: #F44336;
+}
+.bad::before {
+  content: '\2718';
+  color: currentcolor;
+  margin-right: 8px;
+}
+.ok {
+  color: #FF9800;
+}
+.ok::before {
+  content: '\2713';
+  color: currentcolor;
+  margin-right: 8px;
+}
+a {
+  color: #2196F3;
+}
+.sidebyside {
+  display: flex;
+  font-size: 14px;
+}
+label {
+  display: block;
+  color: #607D8B;
+  font-weight: 500;
+  margin-top: 16px;
+}
+.small {
+  font-size: 14px;
 }
 </style>
 </head>
@@ -22,48 +81,100 @@ body {
 
 <h1>Polymer app first paint / loading demos</h1>
 
+<summary class="small">This page shows various techniques for loading Polymer-based applications. Each comes with tradeoffs. Some strategies are easy for beginners but come at the cost of performance. More advanced techniques require work from the developer but yield excellent first paint/load numbers.</summary>
+<!-- <p style="text-align:center;">Try these demos using DevTools emulation.</p> -->
+
+<p class="small"><b>Note</b>: Turn on DevTools emulation and have the console closed so page load isn't effected.</p>
+
 <ol>
   <li>
-    <a href="unresolved.html">body unresolved</a> - Polymer's <code>&lt;body unresolved></code> features hides page (white-out) until everything is ready. This is an easy control for FOUC.
-    <ul>
-      <li>No FOUC</li>
-      <li>Slow first paint</li>
-    </ul>
+    <a href="binding.html">&lt;body is="body-bind"></a> super fast loading app that still use Polymer's features (data binding, observers, etc.) in the main page.
+    <div class="sidebyside">
+      <ul><label>Performance</label>
+        <li class="good">No FOUC</li>
+        <li class="good">Fast first paint</li>
+        <li class="good">Polyfills conditionally loaded</li>
+      </ul>
+      <ul><label>Developer ergonomics</label>
+        <li class="good">Easy to implement</li>
+        <li class="good">Uses Polymer features inside the main page</li>
+        <li class="ok">Manual FOUC prevention</li>
+      </ul>
+    </div>
   </li>
   <li>
-    <a href="fouc.html">Async loading</a> - async loading elements is fast, but can cause visual FOUC as elements upgrade.
-    <ul>
-      <li>FOUC</li>
-      <li>Fast first paint</li>
-    </ul>
+    <a href="appshell.html">App shell</a> app shell concept can remove FOUC by pre-styling markup before it upgrades using Custom Element's <code>:unresolved</code> pseudo selector.
+    <div class="sidebyside">
+      <ul><label>Performance</label>
+        <li class="good">No FOUC</li>
+        <li class="good">Fast first paint</li>
+      </ul>
+      <ul><label>Developer ergonomics</label>
+        <li class="good">Easy to implement</li>
+        <li class="ok">Manual FOUC prevention</li>
+      </ul>
+    </div>
   </li>
   <li>
-    <a href="appshell.html">App shell concept</a> - shows how the app shell concept can remove FOUC by pre-styling markup before it upgrades.
-    <ul>
-      <li>No FOUC</li>
-      <li>Fast first paint</li>
-    </ul>
+    <a href="fouc.html">Async loading</a> async loading HTML imports is faster (it does not block page rendering). The cost can be visual FOUC as elements upgrade.
+    <div class="sidebyside">
+      <ul><label>Performance</label>
+        <li class="bad">FOUC</li>
+        <li class="good">Fast first paint</li>
+      </ul>
+      <ul><label>Developer ergonomics</label>
+        <li class="good">Easy to implement</li>
+        <li class="ok">Manual FOUC prevention</li>
+      </ul>
+    </div>
   </li>
   <li>
-    <a href="binding.html">Polymer is="body-bind"</a> - shows how you can create a super fast loading app that and still use Polymer's features (data binding, observers, etc.) in the main page.
-    <ul>
-      <li>No FOUC</li>
-      <li>Fast first paint</li>
-      <li>use Polymer features in main page</li>
-    </ul>
+    <a href="unresolved.html">&lt;body unresolved></a> Polymer's <code>&lt;body unresolved></code> feature hides the page until everything is ready (white screen of death).
+    <div class="sidebyside">
+      <ul><label>Performance</label>
+        <li class="good">No FOUC</li>
+        <li class="bad">Slow first paint</li>
+      </ul>
+      <ul><label>Developer ergonomics</label>
+        <li class="good">Easy to implement</li>
+        <li class="good">Automatic FOUC prevention</li>
+      </ul>
+    </div>
   </li>
 </ol>
 
-<p><b>Note</b>: In the demos, open the console to see first paint times (Chrome only).</p>
+<h1>Ways to use vulcanize</h1>
+<ol>
+  <li>
+    <a href="inline.v.html">Inline all assets</a> inlines all css/js/import assets into main page
+    <ul>
+      <li class="good">Minimal # of requests</li>
+      <li class="ok">Increases weight of main page (bad for slow connections)</li>
+    </ul>
+  </li>
+  <li>
+    <a href="crisper-top.html">With Crisper (&lt;script defer> @ top)</a> splits script from HTML. Less HTML parser -> JS context switching.
+    <ul>
+      <li class="good">Vulcanized JS bundle loads sooner (e.g. elements upgrade sooner)</li>
+    </ul>
+  </li>
+  <li>
+    <a href="crisper-bottom.html">With Crisper (&lt;script> @ bottom)</a> splits script from HTML. Less HTML parser -> JS context switching.
+    <!-- <ul>
+      <li class="good">use Polymer features in main page</li>
+    </ul> -->
+  </li>
+</ol>
 
 <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+// Analytics.
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-  ga('create', 'UA-43475701-1', 'ebidel.github.io');
-  ga('send', 'pageview');
+ga('create', 'UA-71183019-1', 'auto');
+ga('send', 'pageview');
 </script>
 </body>
 </html>

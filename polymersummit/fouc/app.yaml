@@ -1,0 +1,59 @@
+application: polymerfast
+runtime: python27
+version: 1
+api_version: 1
+threadsafe: yes
+
+# libraries:
+#   - name: jinja2
+#     version: "2.6"
+#   - name: webapp2
+#     version: "2.5.2"
+
+handlers:
+
+- url: /bower_components
+  static_dir: bower_components
+  secure: always
+
+- url: /elements
+  static_dir: elements
+  secure: always
+
+- url: /binding.html$
+  static_files: binding.html
+  upload: binding\.html
+  secure: always
+  http_headers:
+    Link: '</elements/bootstrap.v.html>; rel=preload; as=document, </elements/bootstrap.v.js>; rel=preload; as=script, </styles.css>; rel=preload; as=style'
+
+- url: /appshell.html$
+  static_files: appshell.html
+  upload: appshell\.html
+  secure: always
+  http_headers:
+    Link: '</elements/elements.v.html>; rel=preload; as=document, </elements/elements.v.js>; rel=preload; as=script, </styles.css>; rel=preload; as=style'
+
+- url: /(.*).(html|js|css)$
+  static_files: \1.\2
+  upload: (.*)\.(html|js|css)
+  secure: always
+
+- url: /$
+  static_files: index.html
+  upload: index.html
+  secure: always
+
+skip_files:
+  - ^(.*/)?#.*#$
+  - ^(.*/)?.*~$
+  - ^(.*/)?.*\.py[co]$
+  - ^(.*/)?.*\.md$
+  - ^(.*/)?.*/RCS/.*$
+  - ^(.*/)?\..*$
+  - gulpfile.js
+  - (package|bower).json
+  - test*
+  - node_modules/(.*)
+  - bower_components/[^/]+/bower_components/.*$
+  - bower_components/(.+/)+(test/|demo/|README|AUTHORS|CONTRIBUTING|PATENTS|Makefile)

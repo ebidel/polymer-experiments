@@ -2,12 +2,8 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>FOUC demo</title>
+<title>FOUC demo - vulcanized main page</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
-<!-- Phase 1: load critically small vulcanized bundle upfront.
-     It loads Polymer, setups up some initial data and dynamically loads the
-     rest of the page's elements. -->
-<link rel="import" href="elements/bootstrap.v.html" id="critical" async>
 <link rel="stylesheet" href="styles.css">
 <style>
 /* Critical CSS is inlined which styles the "app shell", giving it layout
@@ -45,6 +41,14 @@ paper-card:unresolved {
   margin-top: -132px !important;
 }
 </style>
+<style is="custom-style">
+paper-drawer-panel[selected="main"] {
+  --paper-drawer-panel-scrim: {
+    opacity: 0 !important;
+  };
+}
+</style>
+<link rel="import" href="crisper-top.v.html" id="critical" async>
 </head>
 <body is="my-app" id="app" class="fullbleed">
 <!-- <body is="body-bind" class="fullbleed"> -->
@@ -86,9 +90,6 @@ paper-card:unresolved {
           <span>Object binding:</span><span text-content="{{obj.person.name}}"></span><br>
           <span>Array binding (dynamically fetched pre-Polymer):</span>
         </div>
-        <!-- <template is="dom-if" if="{{versions.length}}">
-          <span on-tap="sayHi">sdfasdfasdfsdf</span>
-        </template> -->
         <ul>
           <template is="dom-repeat" items="[[versions]]">
             <li><span>{{item.channel}}</span><span>{{item.version}}</span></li>
@@ -138,7 +139,7 @@ function setupCriticalBundleMetics() {
       var entry = performance.getEntriesByName(e.target.href)[0];
       var str = `started @ ${entry.startTime.toFixed(2)} ms, took: ${entry.duration.toFixed(2)} ms`;
       console.info('Critical bundle: ' + str);
-      document.querySelector('#c_output output').textContent = str;
+      document.querySelector('#e_output output').textContent = str;
     };
   }
 }
@@ -165,11 +166,6 @@ function setupFirstPaintMetrics() {
   }
 }
 
-// var unresolvedEls = document.querySelectorAll('[unresolved]');
-// [].forEach.call(unresolvedEls, function(el, i) {
-//   el.removeAttribute('unresolved');
-// });
-
 // Start fetching data before elements are even upgraded.
 var dataPromise = fetchData('https://www.chromestatus.com/omaha_data');
 
@@ -180,6 +176,14 @@ document.body.addEventListener('dom-change', function(e) {
 setupFirstPaintMetrics();
 setupCriticalBundleMetics();
 lazyloadWebComponentsPolyfills();
+
+// Need to update custom prop styling when drawer selector changes.
+var drawer = document.querySelector('paper-drawer-panel');
+drawer.addEventListener('iron-select', function(e) {
+  drawer.async(function() {
+    Polymer.updateStyles();
+  }, 0);
+});
 
 // Analytics.
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
