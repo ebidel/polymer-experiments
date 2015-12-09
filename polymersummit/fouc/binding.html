@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <title>FOUC demo</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
+<!-- <link rel="preconnect" href="//www.example.com"> -->
+<!-- <link rel="subresource" href="/elements/elements-no-polymer.v.html"> -->
+<!-- <link rel="subresource" href="/elements/elements-no-polymer.v.js"> -->
 <!-- Phase 1: load critically small vulcanized bundle upfront.
      It loads Polymer, setups up some initial data and dynamically loads the
      rest of the page's elements. -->
@@ -84,11 +87,11 @@ paper-card:unresolved {
         <div>
           <span>String binding:</span><span text-content="{{text}}"></span><br>
           <span>Object binding:</span><span text-content="{{obj.person.name}}"></span><br>
-          <span>Array binding (dynamically fetched pre-Polymer):</span>
+          <span>Array binding (dynamically fetched pre-Polymer):</span><br>
+          <template is="dom-if" if="{{versions.length}}">
+            <span>Event listener:</span><span on-tap="sayHi">Click me!</span>
+          </template>
         </div>
-        <!-- <template is="dom-if" if="{{versions.length}}">
-          <span on-tap="sayHi">sdfasdfasdfsdf</span>
-        </template> -->
         <ul>
           <template is="dom-repeat" items="[[versions]]">
             <li><span>{{item.channel}}</span><span>{{item.version}}</span></li>

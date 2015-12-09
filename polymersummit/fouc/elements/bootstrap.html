@@ -1,10 +1,15 @@
-<link rel="import" href="../bower_components/polymer/polymer.html">
-<link rel="import" href="body-bind.html">
-<!-- <link rel="import" href="elements.html"> -->
+<!-- <link rel="import" href="../bower_components/polymer/polymer.html"> -->
+<link rel="import" href="../bower_components/polymer/polymer-standard.html">
 
-<link rel="import" href="my-app.html">
+<link rel="import" href="body-bind.html">
 
 <!-- Phase 2: bootstrap some of the app's initial data. -->
+<link rel="import" href="my-app.html">
+
+<!-- Load rest of polymer custom elements after my-app. -->
+<link rel="import" href="../bower_components/polymer/polymer-elements.html">
+
+<!-- Phase 3: load elements bundle -->
 <script>
 (function() {
 'use strict';
@@ -25,7 +30,7 @@
     });
   }
 
-  // Phase 3: Async fetch vulcanied elements bundle last.
+  // Phase 4: Async fetch vulcanied elements bundle last.
   importHref('elements/elements-no-polymer.v.html').then(function(link) {
     var entry = window.performance.getEntriesByName(link.href)[0];
     var str = `started @ ${entry.startTime.toFixed(2)} ms, took: ${entry.duration.toFixed(2)} ms`;
