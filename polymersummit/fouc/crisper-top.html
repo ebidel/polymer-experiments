@@ -2,8 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>FOUC demo - vulcanized main page</title>
+<title>Vulcanized elements - crisper script in top of bundle</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
+<link rel="import" href="crisper-top.v.html" id="critical" async>
 <link rel="stylesheet" href="styles.css">
 <style>
 /* Critical CSS is inlined which styles the "app shell", giving it layout
@@ -43,7 +44,6 @@ paper-drawer-panel[selected="main"] {
   };
 }
 </style>
-<link rel="import" href="crisper-top.v.html" id="critical" async>
 </head>
 <body is="my-app" id="app" class="fullbleed">
 <!-- <body is="body-bind" class="fullbleed"> -->
@@ -70,11 +70,9 @@ paper-drawer-panel[selected="main"] {
     </paper-toolbar>
     <div class="layout vertical center scroll-content">
       <paper-card>
-        This page async loads everything, loads fast, first paints fast,
-        and uses Polymer <code>&lt;body is="body-bind"></code> to lazy-bind
-        Polymer's data binding features in the main page. It does not block
-        rendering. Instead, a critical resource bundle is loaded via HTML imports
-        followed by the rest of elements used by the page.
+        This page shows the effects of vulcanizing and HTML Import bundle
+        and having Crisper output a <code>&lt;script defer</code> at the tip of that import. Theoretically, this starts the script download sooner, and therefore,
+        elements are registered sooner.
         <h3>Metrics</h3>
         <div id="fp_output"><span>First paint:</span><output>-</output></div>
         <div id="c_output"><span>Critical bundle:</span><output>-</output></div>

@@ -2,9 +2,14 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Vulcanized elements - crisper script in bottom of bundle</title>
+<title>No Imports on main page. Bootsrap is all done in a .js fiile</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
-<link rel="import" href="crisper-bottom.v.html" id="critical" async>
+
+<link rel="dns-prefetch" href="https://www.chromestatus.com">
+<link rel="dns-prefetch" href="https://www.google-analytics.com">
+<link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://fonts.googleapis.com" crossorigin>
+
 <link rel="stylesheet" href="styles.css">
 <style>
 /* Critical CSS is inlined which styles the "app shell", giving it layout
@@ -37,13 +42,6 @@ paper-card:unresolved {
   margin-top: -132px !important;
 }
 </style>
-<style is="custom-style">
-paper-drawer-panel[selected="main"] {
-  --paper-drawer-panel-scrim: {
-    opacity: 0 !important;
-  };
-}
-</style>
 </head>
 <body is="my-app" id="app" class="fullbleed">
 <!-- <body is="body-bind" class="fullbleed"> -->
@@ -70,8 +68,11 @@ paper-drawer-panel[selected="main"] {
     </paper-toolbar>
     <div class="layout vertical center scroll-content">
       <paper-card>
-        This page shows the effects of vulcanizing and HTML Import bundle
-        and having Crisper output the script at the bottom of that import.
+        This page async loads everything, loads fast, first paints fast,
+        and uses Polymer <code>&lt;body is="body-bind"></code> to lazy-bind
+        Polymer's data binding features in the main page. It does not block
+        rendering. Instead, a critical resource bundle is loaded via HTML imports
+        followed by the rest of elements used by the page.
         <h3>Metrics</h3>
         <div id="fp_output"><span>First paint:</span><output>-</output></div>
         <div id="c_output"><span>Critical bundle:</span><output>-</output></div>
@@ -80,6 +81,9 @@ paper-drawer-panel[selected="main"] {
         <div>
           <span>String binding:</span><span text-content="{{text}}"></span><br>
           <span>Object binding:</span><span text-content="{{obj.person.name}}"></span><br>
+          <template is="dom-if" if="{{versions.length}}">
+            <span>Event listener:</span><span on-tap="sayHi">Click me!</span>
+          </template>
           <span>Array binding (dynamically fetched pre-Polymer):</span>
         </div>
         <ul>
@@ -95,6 +99,7 @@ paper-drawer-panel[selected="main"] {
   </paper-header-panel>
 </paper-drawer-panel>
 
+<script src="/elements/bootstrap.v.js" async></script>
 <script>
 var app = document.querySelector('#app');
 
@@ -131,7 +136,7 @@ function setupCriticalBundleMetics() {
       var entry = performance.getEntriesByName(e.target.href)[0];
       var str = `started @ ${entry.startTime.toFixed(2)} ms, took: ${entry.duration.toFixed(2)} ms`;
       console.info('Critical bundle: ' + str);
-      document.querySelector('#e_output output').textContent = str;
+      document.querySelector('#c_output output').textContent = str;
     };
   }
 }
@@ -158,6 +163,11 @@ function setupFirstPaintMetrics() {
   }
 }
 
+// var unresolvedEls = document.querySelectorAll('[unresolved]');
+// [].forEach.call(unresolvedEls, function(el, i) {
+//   el.removeAttribute('unresolved');
+// });
+
 // Start fetching data before elements are even upgraded.
 var dataPromise = fetchData('https://www.chromestatus.com/omaha_data');
 
@@ -168,14 +178,6 @@ document.body.addEventListener('dom-change', function(e) {
 setupFirstPaintMetrics();
 setupCriticalBundleMetics();
 lazyloadWebComponentsPolyfills();
-
-// Need to update custom prop styling when drawer selector changes.
-var drawer = document.querySelector('paper-drawer-panel');
-drawer.addEventListener('iron-select', function(e) {
-  drawer.async(function() {
-    Polymer.updateStyles();
-  }, 0);
-});
 
 // Analytics.
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
