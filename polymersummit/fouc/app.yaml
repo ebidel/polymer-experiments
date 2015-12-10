@@ -25,8 +25,8 @@ handlers:
   upload: binding\.html
   secure: always
   http_headers:
-    Link: '</elements/bootstrap.v.html>; rel=preload; as=document, </elements/bootstrap.v.js>; rel=preload; as=script, </styles.css>; rel=preload; as=style'
-    #Link: '<https://www.chromestatus.com>; rel=preconnect, <https://www.google-analytics.com>; rel=preconnect, <https://fonts.gstatic.com>; rel=preconnect; crossorgin'
+    Link: '</elements/bootstrap.v.html>; rel=preload; as=document, </elements/bootstrap.v.js>; rel=preload; as=script, </styles.css>; rel=preload; as=style, <https://www.chromestatus.com>; rel=preconnect, <https://www.google-analytics.com>; rel=preconnect, <https://fonts.gstatic.com>; rel=preconnect; crossorigin, <https://fonts.googleapis.com>; rel=preconnect; crossorigin'
+    #Link: '<https://www.chromestatus.com>; rel=preconnect, <https://www.google-analytics.com>; rel=preconnect, <https://fonts.gstatic.com>; rel=preconnect; crossorigin'
 
 - url: /appshell.html$
   static_files: appshell.html

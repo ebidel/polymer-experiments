@@ -1,5 +1,6 @@
 html, body {
-  font-family: 'Roboto', sans-serif;
+  /*font-family: 'Roboto', sans-serif;*/
+  font-family: sans-serif;
   background-color: #eee;
   margin: 0;
 }
@@ -35,4 +36,16 @@ paper-drawer-panel[selected="drawer"] paper-icon-button[icon="menu"] {
 paper-icon-button[icon="menu"] {
   position: relative;
   z-index: 1;
+}
+@media all and (max-width: 450px) {
+  body {
+    font-size: 3vw;
+  }
+  .scroll-content {
+    margin: 60px 16px 60px 16px;
+  }
+  paper-card {
+    padding: 16px;
+    height: 420px;
+  }
 }

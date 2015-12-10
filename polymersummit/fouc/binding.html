@@ -5,15 +5,20 @@
 <title>FOUC demo</title>
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
 
-<link rel="preconnect" href="https://www.chromestatus.com">
-<link rel="preconnect" href="https://www.google-analytics.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- <link rel="preconnect" href="https://www.chromestatus.com"> -->
+<!-- <link rel="preconnect" href="https://www.google-analytics.com"> -->
+<!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> -->
+<link rel="dns-prefetch" href="https://www.chromestatus.com">
+<link rel="dns-prefetch" href="https://www.google-analytics.com">
+<link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://fonts.googleapis.com" crossorigin>
+
 
 <!-- Phase 1: load critically small vulcanized bundle upfront.
      It loads Polymer, setups up some initial data and dynamically loads the
      rest of the page's elements. -->
-<!-- <link rel="import" href="elements/bootstrap.v.html" id="critical" async> -->
-<script src="/elements/bootstrap.v.js" async></script>
+<link rel="import" href="elements/bootstrap.v.html" id="critical" async>
+<!-- <script src="/elements/bootstrap.v.js" async></script> -->
 
 <link rel="stylesheet" href="styles.css">
 <style>
@@ -23,11 +28,6 @@
    and loaded in elements.html when the element are registered. When the elements
    load + upgrade, their CSS will start applying and the :unresolved pseudo
    selector will no longer apply. */
-html, body {
-  font-family: 'Roboto', sans-serif;
-  background-color: #eee;
-  margin: 0;
-}
 paper-toolbar, paper-card, paper-drawer-panel {
   display: block;
 }
@@ -91,10 +91,10 @@ paper-card:unresolved {
         <div>
           <span>String binding:</span><span text-content="{{text}}"></span><br>
           <span>Object binding:</span><span text-content="{{obj.person.name}}"></span><br>
-          <span>Array binding (dynamically fetched pre-Polymer):</span><br>
           <template is="dom-if" if="{{versions.length}}">
             <span>Event listener:</span><span on-tap="sayHi">Click me!</span>
           </template>
+          <span>Array binding (dynamically fetched pre-Polymer):</span>
         </div>
         <ul>
           <template is="dom-repeat" items="[[versions]]">
