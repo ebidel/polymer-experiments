@@ -6285,7 +6285,7 @@ Polymer({
         }
 
         var url = 'https://finance.google.com/finance/info?client=ig&q=' + this.symbols;
-        url = 'http://crossorigin.me/' + url;
+        url = 'https://crossorigin.me/' + url;
 
         fetch(url).then(function (resp) {
           return resp.text();
