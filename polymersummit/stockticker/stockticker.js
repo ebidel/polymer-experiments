@@ -67,7 +67,7 @@ class StockTicker extends HTMLElement {
     }
 
     let url = `https://finance.google.com/finance/info?client=ig&q=${this.symbols}`;
-    url = `http://crossorigin.me/${url}`;
+    url = `https://crossorigin.me/${url}`;
 
     return fetch(url).then(resp => resp.text()).then(text => {
       let parsedText = text.slice(text.indexOf('['));
