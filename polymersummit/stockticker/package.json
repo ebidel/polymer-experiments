@@ -6,14 +6,20 @@
   "scripts": {
     "start": "echo 'building...' && ./build.sh && echo 'build successfully' && ./node_modules/http-server/bin/http-server -a localhost -p 3000 -c-1",
     "build": "./build.sh",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "karma start"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "babel": "^5.8.21",
     "crisper": "^1.0.7",
-    "vulcanize": "^1.10.3",
-    "http-server": "^0.9.0"
+    "http-server": "^0.9.0",
+    "jasmine-core": "^2.5.2",
+    "karma": "^1.4.0",
+    "karma-chrome-launcher": "^2.0.0",
+    "karma-jasmine": "^1.1.0",
+    "karma-polymer": "^0.1.4",
+    "karma-spec-reporter": "0.0.26",
+    "vulcanize": "^1.10.3"
   }
 }
