@@ -15,16 +15,17 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
-        { pattern: 'bower_components/**', included: false, served: true, watched: true },
+        { pattern: 'node_modules/**', included: false, served: true, watched: true },
         'stocktickerraw.js',
         './test/stock-ticker.test.js',
         './test/stock-ticker-raw.test.js'
     ],
 
     polymer: {
+      // not use
       // platform: 'bower_components/platform/platform.js',
       src: [
-        './bower_components/polymer/polymer.html',
+        './node_modules/@polymer/polymer/polymer.html',
         'stock-ticker-es6.html',
         'stock-ticker-es6.js'
       ]
