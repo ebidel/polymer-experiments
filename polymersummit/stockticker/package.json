@@ -4,13 +4,16 @@
   "description": "",
   "main": "stockticker.js",
   "scripts": {
+    "start": "echo 'building...' && ./build.sh && echo 'build successfully' && ./node_modules/http-server/bin/http-server -a localhost -p 3000 -c-1",
+    "build": "./build.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
     "babel": "^5.8.21",
     "crisper": "^1.0.7",
-    "vulcanize": "^1.10.3"
+    "vulcanize": "^1.10.3",
+    "http-server": "^0.9.0"
   }
 }
