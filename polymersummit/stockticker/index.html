@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
-<script src="bower_components/webcomponentsjs/webcomponents-lite.min.js" async></script>
+<script src="node_modules/webcomponents.js/webcomponents-lite.min.js" async></script>
 <link rel="import" href="stock-ticker-es6.v.html" async>
 <style>
   html, body {
@@ -45,13 +45,15 @@
 
 <main>
   <div>
+    <!-- Stockticker -->
     <stock-ticker symbols='["GOOG", "GOOGL"]'>Loading...</stock-ticker>
+    <!-- Stockticker Raw -->
     <stock-ticker-raw symbols='[".DJI", "NDX"]'>Loading</stock-ticker-raw>
     <!-- <button>AAPL</button> -->
   </div>
 </main>
 
-<script src="stockticker.js" async></script>
+<script src="stocktickerraw.js" async></script>
 <script>
 //'use strict';
 

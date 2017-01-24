@@ -13,7 +13,7 @@
 
 'use strict';
 
-class StockTicker extends HTMLElement {
+class StockTickerRaw extends HTMLElement {
 
   static get is() {
     return 'stock-ticker-raw';
@@ -67,7 +67,8 @@ class StockTicker extends HTMLElement {
     }
 
     let url = `https://finance.google.com/finance/info?client=ig&q=${this.symbols}`;
-    url = `https://crossorigin.me/${url}`;
+    //url = `https://crossorigin.me/${url}`;
+    url = `${url}`;
 
     return fetch(url).then(resp => resp.text()).then(text => {
       let parsedText = text.slice(text.indexOf('['));
@@ -122,4 +123,4 @@ class StockTicker extends HTMLElement {
   }
 }
 
-document.registerElement(StockTicker.is, StockTicker);
+document.registerElement(StockTickerRaw.is, StockTickerRaw);

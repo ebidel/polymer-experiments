@@ -12,9 +12,9 @@ js_out_file=$element.v.js
 
 BABEL=node_modules/babel/bin/babel.js
 
-vulcanize $element.html \
+node_modules/vulcanize/bin/vulcanize $element.html \
     --inline-script --inline-css --strip-comments | \
-    crisper -h $html_out_file -j $js_out_file
+    node_modules/crisper/bin/crisper -h $html_out_file -j $js_out_file
 
 $BABEL --compact false $js_out_file -o $js_out_file
 
