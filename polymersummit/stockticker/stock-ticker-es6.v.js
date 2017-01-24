@@ -8112,88 +8112,89 @@ Polymer.Collection.applySplices = function (userArray, splices) {
     this.fire('dom-change');
   }
 });
-(function () {
+'use strict';
 
-  'use strict';
+var StockTicker = (function () {
+  function StockTicker() {
+    _classCallCheck(this, StockTicker);
+  }
 
-  var StockTicker = (function () {
-    function StockTicker() {
-      _classCallCheck(this, StockTicker);
-    }
+  _createClass(StockTicker, [{
+    key: 'beforeRegister',
+    value: function beforeRegister() {
+      // Takes camelcase class name "StockTicker" -> "stock-ticker".
+      var is = this.constructor.name.replace(/\W+/g, '-').replace(/([a-z\d])([A-Z])/g, '$1-$2').toLowerCase();
 
-    _createClass(StockTicker, [{
-      key: 'beforeRegister',
-      value: function beforeRegister() {
-        // Takes camelcase class name "StockTicker" -> "stock-ticker".
-        var is = this.constructor.name.replace(/\W+/g, '-').replace(/([a-z\d])([A-Z])/g, '$1-$2').toLowerCase();
-
-        this.is = is;
-        this.properties = {
-          symbols: {
-            type: Array,
-            value: function value() {
-              return [];
-            },
-            observer: '_updateQuotes'
+      this.is = is;
+      this.properties = {
+        symbols: {
+          type: Array,
+          value: function value() {
+            return [];
           },
-          tickers: {
-            type: Array,
-            value: function value() {
-              return [];
-            }
+          observer: '_updateQuotes'
+        },
+        tickers: {
+          type: Array,
+          value: function value() {
+            return [];
           }
-        };
-      }
-    }, {
-      key: '_updateQuotes',
-      value: function _updateQuotes() {
-        var _this = this;
-
-        if (!this.symbols.length) {
-          return;
         }
+      };
+    }
+  }, {
+    key: '_updateQuotes',
+    value: function _updateQuotes() {
+      var _this = this;
 
-        var url = 'https://finance.google.com/finance/info?client=ig&q=' + this.symbols;
-        //url = `https://crossorigin.me/${url}`;
-        url = '' + url;
+      if (!this.symbols.length) {
+        return;
+      }
 
-        fetch(url).then(function (resp) {
-          return resp.text();
-        }).then(function (text) {
-          // Remove // prefix from response and parse as JSON.
-          var tickers = JSON.parse(text.slice(text.indexOf('[')));
-          _this.tickers = tickers;
-        });
-      }
-    }, {
-      key: '_computeColor',
-      value: function _computeColor(gain) {
-        return 'color:' + (gain >= 0 ? '#4CAF50' : '#F44336');
-      }
-    }, {
-      key: '_computeArrow',
-      value: function _computeArrow(gain) {
-        return '' + (gain >= 0 ? '▲' : '▼');
-      }
-    }, {
-      key: '_computeHref',
-      value: function _computeHref(ticker) {
-        return 'https://www.google.com/finance?q=' + ticker;
-      }
-    }, {
-      key: '_computePoints',
-      value: function _computePoints(points) {
-        return Math.abs(points);
-      }
-    }, {
-      key: '_computePercent',
-      value: function _computePercent(percent) {
-        return percent.slice(1);
-      }
-    }]);
+      var url = 'https://finance.google.com/finance/info?client=ig&q=' + this.symbols;
+      //url = `https://crossorigin.me/${url}`;
+      url = '' + url;
 
-    return StockTicker;
-  })();
+      fetch(url).then(function (resp) {
+        return resp.text();
+      }).then(function (text) {
+        // Remove // prefix from response and parse as JSON.
+        var tickers = JSON.parse(text.slice(text.indexOf('[')));
+        _this.tickers = tickers;
+      });
+    }
+  }, {
+    key: '_computeColor',
+    value: function _computeColor(gain) {
+      return 'color:' + (gain >= 0 ? '#4CAF50' : '#F44336');
+    }
+  }, {
+    key: '_computeArrow',
+    value: function _computeArrow(gain) {
+      return '' + (gain >= 0 ? '▲' : '▼');
+    }
+  }, {
+    key: '_computeHref',
+    value: function _computeHref(ticker) {
+      return 'https://www.google.com/finance?q=' + ticker;
+    }
+  }, {
+    key: '_computePoints',
+    value: function _computePoints(points) {
+      return Math.abs(points);
+    }
+  }, {
+    key: '_computePercent',
+    value: function _computePercent(percent) {
+      return percent.slice(1);
+    }
+  }]);
+
+  return StockTicker;
+})();
+
+;
+(function () {
 
   Polymer(StockTicker);
 })();

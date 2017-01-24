@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1">
 <script src="bower_components/webcomponentsjs/webcomponents-lite.min.js" async></script>
-<link rel="import" href="stock-ticker-es6.v.html" async>
 <style>
   html, body {
     margin: 0;
@@ -45,13 +44,14 @@
 
 <main>
   <div>
-    <stock-ticker symbols='["GOOG", "GOOGL"]'>Loading...</stock-ticker>
+    <stock-ticker-raw symbols='[".DJI", "NDX"]'>Loading</stock-ticker-raw>
     <!-- <button>AAPL</button> -->
   </div>
 </main>
 
-<center><a href="index-raw.html">Test stock-ticker-raw</a></center>
+<center><a href="index.html">Test stock-ticker</a></center>
 
+<script src="stockticker.js" async></script>
 <script>
 //'use strict';
 
