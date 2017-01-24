@@ -13,7 +13,7 @@
 
 'use strict';
 
-class StockTicker extends HTMLElement {
+class StockTickerRaw extends HTMLElement {
 
   static get is() {
     return 'stock-ticker-raw';
@@ -123,4 +123,4 @@ class StockTicker extends HTMLElement {
   }
 }
 
-document.registerElement(StockTicker.is, StockTicker);
+document.registerElement(StockTickerRaw.is, StockTickerRaw);

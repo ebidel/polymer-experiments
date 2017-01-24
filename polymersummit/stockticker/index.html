@@ -15,7 +15,7 @@
   }
   main {
     display: flex;
-    height: 80%;
+    height: 100%;
     justify-content: center;
     align-items: center;
   }
@@ -45,13 +45,15 @@
 
 <main>
   <div>
+    <!-- Stockticker -->
     <stock-ticker symbols='["GOOG", "GOOGL"]'>Loading...</stock-ticker>
+    <!-- Stockticker Raw -->
+    <stock-ticker-raw symbols='[".DJI", "NDX"]'>Loading</stock-ticker-raw>
     <!-- <button>AAPL</button> -->
   </div>
 </main>
 
-<center><a href="index-raw.html">Test stock-ticker-raw</a></center>
-
+<script src="stocktickerraw.js" async></script>
 <script>
 //'use strict';
 
