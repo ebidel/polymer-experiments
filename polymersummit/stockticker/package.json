@@ -21,5 +21,11 @@
     "karma-polymer": "^0.1.4",
     "karma-spec-reporter": "0.0.26",
     "vulcanize": "^1.10.3"
+  },
+  "dependencies": {
+    "@polymer/iron-elements": "0.0.3",
+    "@polymer/paper-elements": "0.0.3",
+    "@polymer/polymer": "^1.2.5-npm-test.2",
+    "font-roboto-local": "^1.0.1"
   }
 }
